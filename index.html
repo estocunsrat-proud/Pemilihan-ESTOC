@@ -870,6 +870,11 @@
         // KONSTANTA & KANDIDAT RESMI DEFAULT (BATCH 25 & BATCH 26)
         // =========================================================================
         const ADMIN_EMAIL = 'rulan0144@gmail.com';
+
+        // OPSIONAL: tempel URL Web App Apps Script (yang berakhiran /exec) di antara tanda kutip di bawah.
+        // Jika diisi, semua pemilih otomatis terhubung ke database dan Link Pemilih menjadi pendek
+        // (cukup alamat websitenya saja, tanpa ?api=...).
+        const DEFAULT_GAS_URL = '';
         const DEFAULT_SPREADSHEET_ID = '16aHf5E4cdzCs_ulSAT5eD9oU7mwtPW__3YwD6rRfADs';
 
         // Avatar inisial kandidat bersih dengan warna resmi Batch 25 (#26499E) & Batch 26 (#16A34A)
@@ -1159,7 +1164,7 @@ function jsonResponse(obj) {
             }
         })();
 
-        let gasWebAppUrl = localStorage.getItem(STORAGE_KEYS.GAS_URL) || '';
+        let gasWebAppUrl = DEFAULT_GAS_URL || localStorage.getItem(STORAGE_KEYS.GAS_URL) || '';
         let isSheetsConnected = false;
         let isSyncingNow = false;
 
@@ -1545,8 +1550,10 @@ function jsonResponse(obj) {
                 return;
             }
             const baseUrl = `${window.location.origin}${window.location.pathname}`;
-            const shareUrl = `${baseUrl}?api=${encodeURIComponent(currentUrl)}`;
-            copyTextToClipboard(shareUrl, "Link Pemilih (+API Database) berhasil disalin! Bagikan ke pemilih.");
+            const shareUrl = (DEFAULT_GAS_URL && currentUrl === DEFAULT_GAS_URL)
+                ? baseUrl
+                : `${baseUrl}?api=${encodeURIComponent(currentUrl)}`;
+            copyTextToClipboard(shareUrl, "Link Pemilih berhasil disalin! Bagikan ke pemilih.");
         }
 
         function openAppsScriptModal() {
