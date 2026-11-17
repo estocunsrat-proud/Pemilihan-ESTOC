@@ -121,19 +121,6 @@
                     <span class="text-[11px] text-[#8FA9FF] font-bold">Google Sheets Sync</span>
                 </div>
 
-                <!-- Pilihan Akun Google Tersimpan (Quick Account Picker) -->
-                <div id="saved-google-accounts-section" class="mb-5 hidden">
-                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Pilih Akun Google Tersimpan</p>
-                    <div id="saved-google-accounts-list" class="space-y-2 max-h-36 overflow-y-auto pr-1">
-                        <!-- Diisi via JS -->
-                    </div>
-                    <div class="relative flex py-3 items-center">
-                        <div class="flex-grow border-t border-white/10"></div>
-                        <span class="flex-shrink mx-3 text-[11px] font-semibold text-slate-400 uppercase">atau gunakan akun lain</span>
-                        <div class="flex-grow border-t border-white/10"></div>
-                    </div>
-                </div>
-
                 <!-- Form Input Nama & Email Google -->
                 <form id="login-form" onsubmit="handleLoginSubmit(event)" class="space-y-4">
                     <div>
@@ -1156,10 +1143,10 @@ function jsonResponse(obj) {
             REGISTERED_USERS: 'pemira_estoc_registered_users_v9',
             VOTE_RECORDS: 'pemira_estoc_vote_records_v9',
             ELECTION_STATE: 'pemira_estoc_election_state_v9',
-            GAS_URL: 'pemira_estoc_gas_webapp_url_v9',
-            SAVED_ACCOUNTS: 'pemira_estoc_saved_google_accounts_v9'
+            GAS_URL: 'pemira_estoc_gas_webapp_url_v9'
         };
 
+        try { localStorage.removeItem('pemira_estoc_saved_google_accounts_v9'); } catch (e) {}
         (function captureApiUrlFromQuery() {
             const params = new URLSearchParams(window.location.search);
             const apiUrl = params.get('api');
@@ -1182,7 +1169,6 @@ function jsonResponse(obj) {
             isPublished: false,
             durationMinutes: 15
         };
-        let savedGoogleAccounts = JSON.parse(localStorage.getItem(STORAGE_KEYS.SAVED_ACCOUNTS)) || [];
 
         let currentTab = 'voting';
         let currentFilterBatch = 'all';
@@ -1216,7 +1202,6 @@ function jsonResponse(obj) {
                 urlInput.value = gasWebAppUrl;
             }
 
-            renderSavedGoogleAccounts();
             updateDatabaseStatusUI(false);
 
             if (gasWebAppUrl) {
@@ -1236,39 +1221,6 @@ function jsonResponse(obj) {
         // =========================================================================
         // 1. AUTENTIKASI AKUN GOOGLE & PENCATATAN LOGIN
         // =========================================================================
-        function renderSavedGoogleAccounts() {
-            const container = document.getElementById('saved-google-accounts-section');
-            const list = document.getElementById('saved-google-accounts-list');
-            if (!savedGoogleAccounts || savedGoogleAccounts.length === 0) {
-                container.classList.add('hidden');
-                return;
-            }
-
-            container.classList.remove('hidden');
-            list.innerHTML = savedGoogleAccounts.map(acc => `
-                <button type="button" onclick="quickLoginSavedAccount('${escapeAttr(acc.name)}', '${escapeAttr(acc.email)}')"
-                    class="w-full flex items-center justify-between p-2.5 rounded-xl border border-white/10 hover:border-[#26499E] hover:bg-white/5 transition text-left group">
-                    <div class="flex items-center gap-3 min-w-0">
-                        <div class="w-9 h-9 rounded-full bg-[#14171D] text-white font-bold text-xs flex items-center justify-center shrink-0">
-                            ${escapeHtml(acc.name.charAt(0).toUpperCase())}
-                        </div>
-                        <div class="min-w-0">
-                            <p class="text-xs font-bold text-slate-100 truncate group-hover:text-[#8FA9FF]">${escapeHtml(acc.name)}</p>
-                            <p class="text-[11px] text-slate-400 truncate">${escapeHtml(acc.email)}</p>
-                        </div>
-                    </div>
-                    <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 group-hover:text-[#8FA9FF] shrink-0"></i>
-                </button>
-            `).join('');
-            lucide.createIcons();
-        }
-
-        function quickLoginSavedAccount(name, email) {
-            document.getElementById('auth-name').value = name;
-            document.getElementById('auth-email').value = email;
-            processGoogleLogin(name, email);
-        }
-
         function handleLoginSubmit(e) {
             e.preventDefault();
             const name = document.getElementById('auth-name').value.trim();
@@ -1287,15 +1239,6 @@ function jsonResponse(obj) {
 
             currentUser = { name, email: cleanEmail, role };
             localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(currentUser));
-
-            const existingIdx = savedGoogleAccounts.findIndex(a => a.email === cleanEmail);
-            if (existingIdx >= 0) {
-                savedGoogleAccounts[existingIdx].name = name;
-            } else {
-                savedGoogleAccounts.unshift({ name, email: cleanEmail });
-                if (savedGoogleAccounts.length > 4) savedGoogleAccounts.pop();
-            }
-            localStorage.setItem(STORAGE_KEYS.SAVED_ACCOUNTS, JSON.stringify(savedGoogleAccounts));
 
             const alreadyVoted = voteRecords[cleanEmail] !== undefined;
             registeredUsers[cleanEmail] = {
@@ -1328,7 +1271,6 @@ function jsonResponse(obj) {
             currentUser = null;
             selectedCandidateIds = [];
             localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
-            renderSavedGoogleAccounts();
             checkAuthOverlay();
             showToast("Anda telah keluar dari sesi.");
         }
