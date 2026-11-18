@@ -2202,8 +2202,15 @@ service cloud.firestore {
             });
         }
 
-        async function executeSubmitVote() {
-            if (!currentUser || selectedCandidateIds.length !== 2) return;
+                async function executeSubmitVote() {
+            if (!currentUser) {
+                showToast("Sesi login tidak terbaca. Muat ulang halaman lalu login lagi.", "error");
+                return;
+            }
+            if (selectedCandidateIds.length !== 2) {
+                showToast("Pilihan kandidat tidak terbaca. Pilih 2 kandidat lagi lalu kirim.", "error");
+                return;
+            }
             if (voteRecords[currentUser.email] !== undefined) {
                 showToast("Akun Anda sudah tercatat memberikan suara.", "error");
                 return;
@@ -2216,22 +2223,29 @@ service cloud.firestore {
             });
 
             try {
-                await fbDb.collection('votes').doc(currentUser.uid).set({
+                console.log('Mengirim suara...', choices);
+                const kirim = fbDb.collection('votes').doc(currentUser.uid).set({
                     email: currentUser.email,
                     name: currentUser.name,
                     choices: choices.map(String),
                     choiceNames,
                     createdAt: FV().serverTimestamp()
                 });
+                const batas = new Promise((_, reject) => setTimeout(() => reject({ code: 'timeout' }), 15000));
+                await Promise.race([kirim, batas]);
                 selectedCandidateIds = [];
                 showToast("Suara Anda berhasil dikirim & dicatat ke database!");
             } catch (err) {
-                showToast(err && err.code === 'permission-denied'
-                    ? "Suara ditolak: sesi voting tidak aktif, waktu habis, atau Anda sudah memilih."
-                    : dbErrorMessage(err), "error");
+                console.error('Gagal kirim suara:', err);
+                if (err && err.code === 'timeout') {
+                    showToast("Server tidak menjawab dalam 15 detik. Coba ganti jaringan (data seluler/Wi-Fi lain) atau buka lewat Chrome, lalu kirim lagi.", "error");
+                } else {
+                    showToast(err && err.code === 'permission-denied'
+                        ? "Suara ditolak: sesi voting tidak aktif, waktu habis, atau Anda sudah memilih."
+                        : dbErrorMessage(err), "error");
+                }
             }
         }
-
         // =========================================================================
         // 7. PRIVASI HASIL PEMILIH (HANYA TOP 3 SETELAH DIPUBLIKASIKAN ADMIN)
         // =========================================================================
