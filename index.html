@@ -12,6 +12,10 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Firebase (Auth + Firestore) -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -116,48 +120,32 @@
                 <div id="login-db-status" class="mb-5 px-4 py-2.5 rounded-xl bg-[#1A1E26] border border-white/10 flex items-center justify-between text-xs">
                     <div class="flex items-center gap-2">
                         <span id="login-db-dot" class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                        <span id="login-db-text" class="font-semibold text-slate-200">Mode Penyimpanan Lokal</span>
+                        <span id="login-db-text" class="font-semibold text-slate-200">Memeriksa konfigurasi...</span>
                     </div>
-                    <span class="text-[11px] text-[#8FA9FF] font-bold">Google Sheets Sync</span>
+                    <span class="text-[11px] text-[#8FA9FF] font-bold">Firebase</span>
                 </div>
 
-                <!-- Form Input Nama & Email Google -->
-                <form id="login-form" onsubmit="handleLoginSubmit(event)" class="space-y-4">
-                    <div>
-                        <label for="auth-name" class="block text-xs font-bold text-slate-200 uppercase tracking-wider mb-1.5">Nama Lengkap Pemilih</label>
-                        <div class="relative">
-                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
-                                <i data-lucide="user" class="w-4 h-4"></i>
-                            </span>
-                            <input type="text" id="auth-name" required placeholder="Masukkan nama lengkap Anda"
-                                class="w-full pl-10 pr-4 py-3 border border-white/15 rounded-xl focus:ring-2 focus:ring-[#26499E] focus:border-[#26499E] focus:outline-none text-sm bg-[#14171D] transition">
-                        </div>
-                    </div>
+                <!-- Peringatan konfigurasi belum diisi -->
+                <div id="login-config-warning" class="hidden mb-5 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-400/30 text-xs text-amber-200 leading-relaxed"></div>
 
-                    <div>
-                        <label for="auth-email" class="block text-xs font-bold text-slate-200 uppercase tracking-wider mb-1.5">Alamat Email Google</label>
-                        <div class="relative">
-                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
-                                <i data-lucide="mail" class="w-4 h-4"></i>
-                            </span>
-                            <input type="email" id="auth-email" required placeholder="namaanda@gmail.com"
-                                class="w-full pl-10 pr-4 py-3 border border-white/15 rounded-xl focus:ring-2 focus:ring-[#26499E] focus:border-[#26499E] focus:outline-none text-sm bg-[#14171D] transition">
-                        </div>
-                    </div>
-
-                    <button type="submit" id="login-submit-btn"
-                        class="w-full bg-[#14171D] hover:bg-[#1E232C] border border-white/20 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition flex items-center justify-center gap-3 text-sm mt-2 active:scale-[0.99]">
-                        <span class="flex items-center justify-center">
-                            <svg class="w-4 h-4" viewBox="0 0 24 24">
-                                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
-                                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.19v3.15C3.17 21.32 7.22 24 12 24z"/>
-                                <path fill="#FBBC05" d="M5.28 14.27c-.24-.72-.38-1.49-.38-2.27s.14-1.55.38-2.27V6.58H1.19C.43 8.11 0 9.81 0 11.6s.43 3.49 1.19 5.02l4.09-2.35z"/>
-                                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.22 0 3.17 2.68 1.19 6.58l4.09 2.35c.95-2.83 3.6-4.93 6.72-4.93z"/>
-                            </svg>
-                        </span>
-                        <span>Lanjutkan dengan Akun Google</span>
+                <!-- Tombol Masuk dengan Google (asli, diverifikasi server) -->
+                <div id="google-signin-wrap">
+                    <button type="button" id="google-login-btn" onclick="signInWithGoogle()"
+                        class="w-full bg-[#14171D] hover:bg-[#1E232C] border border-white/20 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition flex items-center justify-center gap-3 text-sm active:scale-[0.99]">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24">
+                            <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+                            <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.19v3.15C3.17 21.32 7.22 24 12 24z"/>
+                            <path fill="#FBBC05" d="M5.28 14.27c-.24-.72-.38-1.49-.38-2.27s.14-1.55.38-2.27V6.58H1.19C.43 8.11 0 9.81 0 11.6s.43 3.49 1.19 5.02l4.09-2.35z"/>
+                            <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.22 0 3.17 2.68 1.19 6.58l4.09 2.35c.95-2.83 3.6-4.93 6.72-4.93z"/>
+                        </svg>
+                        <span>Masuk dengan Google</span>
                     </button>
-                </form>
+                </div>
+
+                <div id="login-loading" class="hidden mt-4 text-center text-xs text-slate-300">
+                    Memverifikasi akun Google Anda...
+                </div>
+                <div id="login-error" class="hidden mt-4 px-4 py-3 rounded-xl bg-[#DC2626]/10 border border-[#DC2626]/30 text-xs text-[#F87171] leading-relaxed"></div>
 
                 <p class="text-[11px] text-slate-400 mt-5 text-center leading-relaxed">
                     Setiap akun Google memiliki 1 hak suara untuk memilih tepat 2 kandidat Presiden Organisasi.
@@ -222,7 +210,7 @@
         <!-- ================================================================= -->
         <div id="tab-admin" class="space-y-6 hidden">
 
-            <!-- A1. PANEL KONEKSI DATABASE GOOGLE SPREADSHEET -->
+            <!-- A1. PANEL KONEKSI DATABASE FIREBASE -->
             <div class="bg-[#14171D] estoc-card-accent rounded-2xl p-6 shadow-sm border border-white/10">
                 <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-white/10">
                     <div class="flex items-start gap-3.5">
@@ -231,14 +219,14 @@
                         </div>
                         <div>
                             <div class="flex flex-wrap items-center gap-2.5">
-                                <h2 class="text-lg font-bold text-slate-100">Database Google Spreadsheet</h2>
+                                <h2 class="text-lg font-bold text-slate-100">Database Firebase Firestore</h2>
                                 <span id="db-connection-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-300">
                                     <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                                    Mode Offline / Lokal
+                                    Memeriksa koneksi...
                                 </span>
                             </div>
                             <p class="text-xs sm:text-sm text-slate-400 mt-1">
-                                Target Spreadsheet: <span class="font-semibold text-slate-100">Database Pemilihan Presiden Organisasi</span> • Sinkronisasi otomatis setiap 5 detik.
+                                Data tersimpan di Firestore dan diperbarui secara real-time di semua perangkat.
                             </p>
                         </div>
                     </div>
@@ -246,7 +234,7 @@
                     <div class="flex flex-wrap items-center gap-2">
                         <button onclick="openAppsScriptModal()" class="px-3.5 py-2 rounded-xl bg-[#14171D] hover:bg-slate-800 text-white text-xs font-semibold transition flex items-center gap-2 shadow-sm">
                             <i data-lucide="code-2" class="w-4 h-4 text-[#4ADE80]"></i>
-                            <span>Lihat Kode Apps Script</span>
+                            <span>Lihat Aturan Keamanan</span>
                         </button>
                         <button onclick="copyShareableVoterLink()" id="copy-share-link-btn" class="px-3.5 py-2 rounded-xl bg-[#222733] hover:bg-white/15 text-slate-100 border border-white/15 text-xs font-semibold transition flex items-center gap-2">
                             <i data-lucide="share-2" class="w-4 h-4 text-[#8FA9FF]"></i>
@@ -254,37 +242,9 @@
                         </button>
                     </div>
                 </div>
-
-                <!-- Input URL Web App & Action Buttons -->
-                <div class="mt-5 grid grid-cols-1 lg:grid-cols-12 gap-3 items-end">
-                    <div class="lg:col-span-7">
-                        <label for="gas-webapp-url" class="block text-xs font-bold text-slate-200 uppercase tracking-wider mb-1.5">
-                            URL Web App Google Apps Script
-                        </label>
-                        <div class="relative">
-                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
-                                <i data-lucide="link" class="w-4 h-4"></i>
-                            </span>
-                            <input type="url" id="gas-webapp-url" placeholder="https://script.google.com/macros/s/AKfycb.../exec"
-                                class="w-full pl-10 pr-4 py-2.5 bg-[#14171D] border border-white/15 rounded-xl text-sm focus:ring-2 focus:ring-[#26499E] focus:border-[#26499E] focus:outline-none transition">
-                        </div>
-                    </div>
-                    <div class="lg:col-span-5 flex flex-wrap sm:flex-nowrap gap-2">
-                        <button onclick="connectAndSyncSheets()" id="btn-connect-sheets"
-                            class="flex-1 bg-[#26499E] hover:bg-[#1E3A8A] text-white font-semibold py-2.5 px-4 rounded-xl text-xs sm:text-sm shadow-sm transition flex items-center justify-center gap-2">
-                            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-                            <span>Hubungkan & Sinkronisasi</span>
-                        </button>
-                        <button onclick="manualSyncFromSheets()" id="btn-refresh-sheets"
-                            class="bg-[#222733] hover:bg-white/15 text-slate-100 border border-white/15 font-semibold py-2.5 px-3.5 rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-1.5" title="Refresh Data Sekarang">
-                            <i data-lucide="rotate-cw" class="w-4 h-4 text-[#4ADE80]"></i>
-                            <span>Refresh Data</span>
-                        </button>
-                    </div>
-                </div>
                 <div class="mt-3 flex flex-wrap items-center justify-between text-[11px] text-slate-400 gap-2">
-                    <span id="last-sync-label">Terakhir sinkronisasi: Belum terhubung ke Google Sheets</span>
-                    <span>Tip: Bagikan <strong>Link Pemilih</strong> agar perangkat pemilih otomatis terhubung ke database ini.</span>
+                    <span id="last-sync-label">Terakhir diperbarui: menunggu data...</span>
+                    <span>Pemilih cukup membuka <strong>Link Pemilih</strong> lalu masuk dengan akun Google mereka.</span>
                 </div>
             </div>
 
@@ -356,6 +316,22 @@
                 </div>
             </div>
 
+            <!-- A2b. DAFTAR EMAIL PEMILIH YANG DIIZINKAN (OPSIONAL) -->
+            <div class="bg-[#14171D] rounded-2xl p-6 shadow-sm border border-white/10">
+                <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-100">Daftar Email Pemilih yang Diizinkan (Opsional)</h3>
+                        <p class="text-xs text-slate-400 mt-1 max-w-2xl">Satu email per baris. Jika dikosongkan, semua akun Google boleh memilih. Admin selalu boleh masuk. Dicek langsung oleh Firebase, bukan oleh browser.</p>
+                    </div>
+                    <span id="allowed-count" class="bg-[#26499E]/10 text-[#8FA9FF] border border-[#26499E]/20 font-bold px-3.5 py-2 rounded-xl text-xs shrink-0">Semua akun diizinkan</span>
+                </div>
+                <textarea id="allowed-emails-input" rows="5" placeholder="anggota1@gmail.com&#10;anggota2@gmail.com"
+                    class="w-full mt-4 px-3.5 py-2.5 border border-white/15 rounded-xl text-sm font-mono focus:ring-2 focus:ring-[#26499E] focus:outline-none"></textarea>
+                <div class="mt-3 flex justify-end">
+                    <button onclick="saveAllowedEmails()" class="bg-[#26499E] hover:bg-[#1E3A8A] text-white font-semibold py-2.5 px-5 rounded-xl text-xs sm:text-sm shadow-sm transition">Simpan Daftar</button>
+                </div>
+            </div>
+
             <!-- A3. MONITORING PEMILIH LOGIN REAL-TIME -->
             <div class="bg-[#14171D] rounded-2xl p-6 shadow-sm border border-white/10">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5">
@@ -397,7 +373,7 @@
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 gap-4">
                     <div>
                         <h3 class="text-lg font-bold text-slate-100">Manajemen Kandidat (Batch 25 & Batch 26)</h3>
-                        <p class="text-xs sm:text-sm text-slate-400">Tambah, edit, atau hapus kandidat. Foto perangkat otomatis dikompresi agar aman tersimpan di Google Sheets.</p>
+                        <p class="text-xs sm:text-sm text-slate-400">Tambah, edit, atau hapus kandidat. Foto perangkat otomatis dikompresi agar aman tersimpan di database.</p>
                     </div>
                     <button onclick="openCandidateModalForAdd()"
                         class="bg-[#26499E] hover:bg-[#1E3A8A] text-white font-semibold py-2.5 px-4 rounded-xl shadow-sm transition flex items-center gap-2 text-xs sm:text-sm">
@@ -734,7 +710,7 @@
                     <div class="min-w-0 flex-1">
                         <p class="text-xs font-bold text-slate-100">Preview Foto Kandidat</p>
                         <p id="photo-compression-info" class="text-[11px] text-slate-400 mt-0.5">
-                            Otomatis dikompresi maks 280x280px (JPEG) agar aman disimpan di Google Sheets.
+                            Otomatis dikompresi maks 280x280px (JPEG) agar aman disimpan di database.
                         </p>
                     </div>
                 </div>
@@ -771,7 +747,7 @@
         </div>
     </div>
 
-    <!-- Modal Kode Google Apps Script -->
+    <!-- Modal Aturan Keamanan Firestore -->
     <div id="apps-script-modal" class="fixed inset-0 bg-slate-900/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-[#14171D] estoc-card-accent rounded-3xl shadow-2xl max-w-3xl w-full p-6 sm:p-7 relative border border-white/10 max-h-[90vh] flex flex-col">
             <button onclick="closeAppsScriptModal()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-200 p-1">
@@ -780,28 +756,28 @@
 
             <div class="mb-4">
                 <span class="inline-block px-2.5 py-0.5 rounded-md bg-[#16A34A]/10 text-[#4ADE80] text-[11px] font-bold uppercase tracking-wider mb-1">
-                    Panduan Integrasi Database
+                    Keamanan Database
                 </span>
-                <h3 class="text-lg font-bold text-slate-100">Kode Google Apps Script (`Code.gs`)</h3>
+                <h3 class="text-lg font-bold text-slate-100">Aturan Keamanan Firestore (`firestore.rules`)</h3>
                 <p class="text-xs text-slate-400 mt-1">
-                    Salin kode di bawah ini ke dalam <strong>Ekstensi &gt; Apps Script</strong> pada Google Spreadsheet <em>"Database Pemilihan Presiden Organisasi"</em>, lalu klik <strong>Deploy &gt; Web App</strong> (Akses: <em>Siapa saja / Anyone</em>).
+                    Salin aturan di bawah ini ke <strong>Firebase Console &gt; Firestore Database &gt; Rules</strong>, ganti email admin di fungsi <code>isAdmin()</code>, lalu klik <strong>Publish</strong>.
                 </p>
             </div>
 
             <div class="relative flex-1 overflow-hidden rounded-2xl border border-slate-800 bg-[#14171D]">
                 <button onclick="copyAppsScriptCode()" class="absolute top-3 right-3 bg-[#26499E] hover:bg-[#1E3A8A] text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow flex items-center gap-1.5 transition z-10">
                     <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-                    <span>Salin Kode</span>
+                    <span>Salin Aturan</span>
                 </button>
                 <pre id="apps-script-code-block" class="p-4 text-xs text-emerald-300 font-mono overflow-auto h-80 leading-relaxed select-all"></pre>
             </div>
 
             <div class="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-400">
                 <div>
-                    Setelah Deploy selesai, salin <strong>URL Web App</strong> dan tempel pada kolom koneksi di Panel Admin.
+                    Aturan inilah yang menjamin satu akun satu suara, tepat 2 kandidat, dan hanya admin yang bisa membaca seluruh suara.
                 </div>
                 <button onclick="closeAppsScriptModal()" class="px-5 py-2.5 bg-[#14171D] text-white rounded-xl font-semibold text-xs hover:bg-slate-800 transition self-end sm:self-auto">
-                    Tutup Panduan
+                    Tutup
                 </button>
             </div>
         </div>
@@ -839,11 +815,11 @@
     <!-- Footer (30% Jangkar Gelap #14171D) -->
     <footer class="bg-[#14171D] border-t border-slate-800 py-5 mt-12 text-center text-xs text-slate-300">
         <p class="font-bold text-white tracking-wide">KELOMPOK STUDI PASAR MODAL — EQUIL STOCK CLUB — UNIVERSITAS SAM RATULANGI</p>
-        <p class="text-[11px] text-slate-400 mt-1">&copy; 2026 Sistem E-Voting Resmi • Terintegrasi Real-Time dengan Google Spreadsheet</p>
+        <p class="text-[11px] text-slate-400 mt-1">&copy; 2026 Sistem E-Voting Resmi • Terintegrasi Real-Time dengan Firebase</p>
     </footer>
 
     <!-- ===================================================================== -->
-    <!-- 5. JAVASCRIPT APPLICATION, EMBLEM ESTOC & GOOGLE SHEETS SYNC ENGINE   -->
+    <!-- 5. JAVASCRIPT APPLICATION, EMBLEM ESTOC & FIREBASE REAL-TIME ENGINE   -->
     <!-- ===================================================================== -->
     <script>
         // =========================================================================
@@ -860,13 +836,19 @@
         // =========================================================================
         // KONSTANTA & KANDIDAT RESMI DEFAULT (BATCH 25 & BATCH 26)
         // =========================================================================
-        const ADMIN_EMAIL = 'rulan0144@gmail.com';
-
-        // OPSIONAL: tempel URL Web App Apps Script (yang berakhiran /exec) di antara tanda kutip di bawah.
-        // Jika diisi, semua pemilih otomatis terhubung ke database dan Link Pemilih menjadi pendek
-        // (cukup alamat websitenya saja, tanpa ?api=...).
-        const DEFAULT_GAS_URL = '';
-        const DEFAULT_SPREADSHEET_ID = '16aHf5E4cdzCs_ulSAT5eD9oU7mwtPW__3YwD6rRfADs';
+        // ===================== KONFIGURASI (WAJIB DIISI) =====================
+        // Salin dari Firebase Console > Project settings > Your apps > Web app > SDK setup (Config).
+        const FIREBASE_CONFIG = {
+            apiKey: '',
+            authDomain: '',
+            projectId: '',
+            storageBucket: '',
+            messagingSenderId: '',
+            appId: ''
+        };
+        // Email admin (hanya untuk tampilan menu). Penjaga sebenarnya ada di firestore.rules (fungsi isAdmin).
+        // Daftar ini HARUS sama dengan yang di firestore.rules.
+        const ADMIN_EMAILS = ['rulan0144@gmail.com'];
 
         // Avatar inisial kandidat bersih dengan warna resmi Batch 25 (#26499E) & Batch 26 (#16A34A)
         function createInitialsAvatar(name, batch) {
@@ -902,268 +884,170 @@
         ];
 
         // =========================================================================
-        // KODE GOOGLE APPS SCRIPT SIAP PAKAI (UNTUK MODAL ADMIN)
+        // ATURAN KEAMANAN FIRESTORE (UNTUK MODAL ADMIN)
         // =========================================================================
-        const GOOGLE_APPS_SCRIPT_TEMPLATE = `/**
- * GOOGLE APPS SCRIPT WEB APP - PEMIRA KSPM EQUIL STOCK CLUB UNSRAT
- * Spreadsheet Target: Database Pemilihan Presiden Organisasi
- * Cara Deploy: Deploy > New Deployment > Web App > Execute as: Me > Who has access: Anyone
- */
+        const FIRESTORE_RULES_TEMPLATE = `rules_version = '2';
 
-function doGet(e) {
-  return handleRequest(e, null);
-}
+// ATURAN KEAMANAN PEMIRA KSPM EQUIL STOCK CLUB UNSRAT
+// Pasang di: Firebase Console > Firestore Database > Rules > Publish.
+// GANTI email admin di fungsi isAdmin() dengan email admin yang sebenarnya.
 
-function doPost(e) {
-  var payload = {};
-  try {
-    if (e && e.postData && e.postData.contents) {
-      payload = JSON.parse(e.postData.contents);
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- Fungsi bantu ----------
+    function signedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
     }
-  } catch (err) {
-    return jsonResponse({ status: 'error', message: 'Invalid JSON payload: ' + err });
-  }
-  return handleRequest(e, payload);
-}
-
-function handleRequest(e, payload) {
-  var lock = LockService.getScriptLock();
-  lock.tryLock(10000);
-  try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    ensureSheetsExist(ss);
-
-    var action = (e && e.parameter && e.parameter.action) || (payload && payload.action) || 'getAll';
-
-    if (action === 'initSync') {
-      if (payload.candidates && payload.candidates.length > 0) {
-        writeCandidatesToSheet(ss, payload.candidates);
-      }
-      if (payload.settings) {
-        writeSettingsToSheet(ss, payload.settings);
-      }
-      recalculateHasilVoting(ss);
-    } else if (action === 'login') {
-      upsertPemilihLogin(ss, payload.user);
-    } else if (action === 'vote') {
-      recordVoterBallot(ss, payload.email, payload.name, payload.choices, payload.choiceNames);
-      recalculateHasilVoting(ss);
-    } else if (action === 'saveCandidates') {
-      writeCandidatesToSheet(ss, payload.candidates);
-      recalculateHasilVoting(ss);
-    } else if (action === 'updateSettings') {
-      writeSettingsToSheet(ss, payload.settings);
-    } else if (action === 'resetAll') {
-      resetAllElectionSheets(ss, payload.candidates, payload.settings);
+    function myEmail() {
+      return request.auth.token.email.lower();
+    }
+    function isAdmin() {
+      return signedIn() && myEmail() in ['rulan0144@gmail.com'];
+    }
+    function allowedPath() {
+      return /databases/$(database)/documents/config/allowed;
+    }
+    function electionPath() {
+      return /databases/$(database)/documents/config/election;
+    }
+    // Jika daftar email diizinkan kosong / belum ada, semua akun Google boleh memilih.
+    function isAllowedVoter() {
+      return signedIn() && (
+        !exists(allowedPath()) ||
+        get(allowedPath()).data.emails.size() == 0 ||
+        myEmail() in get(allowedPath()).data.emails
+      );
+    }
+    function canUse() {
+      return isAdmin() || isAllowedVoter();
+    }
+    // Sesi dihitung oleh server: waktu mulai (server) + durasi menit.
+    function isElectionOpen() {
+      let e = get(electionPath()).data;
+      return e.isStarted == true
+        && request.time < e.startedAt + duration.value(e.durationMinutes, 'm');
     }
 
-    var state = readFullStateFromSheets(ss);
-    return jsonResponse({ status: 'ok', data: state });
-  } catch (error) {
-    return jsonResponse({ status: 'error', message: error.toString() });
-  } finally {
-    lock.releaseLock();
-  }
-}
-
-function ensureSheetsExist(ss) {
-  var required = {
-    'Kandidat': ['ID', 'Nama', 'Batch', 'Foto', 'Jumlah_Suara'],
-    'Pemilih': ['Email', 'Nama', 'Waktu_Login', 'Status_Voting', 'Pilihan_ID', 'Pilihan_Kandidat'],
-    'Hasil_Voting': ['Peringkat', 'ID', 'Nama_Kandidat', 'Batch', 'Total_Suara', 'Persentase'],
-    'Pengaturan': ['Key', 'Value']
-  };
-  Object.keys(required).forEach(function(sheetName) {
-    var sheet = ss.getSheetByName(sheetName);
-    if (!sheet) {
-      sheet = ss.insertSheet(sheetName);
-      sheet.appendRow(required[sheetName]);
-      sheet.getRange(1, 1, 1, required[sheetName].length).setFontWeight('bold');
+    // ---------- Pengaturan sesi voting ----------
+    match /config/election {
+      allow read: if canUse();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['isStarted', 'startedAt', 'durationMinutes', 'isPublished'])
+        && request.resource.data.isStarted is bool
+        && request.resource.data.isPublished is bool
+        && request.resource.data.durationMinutes is int
+        && request.resource.data.durationMinutes >= 1
+        && request.resource.data.durationMinutes <= 1440
+        && (!('startedAt' in request.resource.data) || request.resource.data.startedAt is timestamp);
     }
-  });
-}
 
-function readFullStateFromSheets(ss) {
-  var candSheet = ss.getSheetByName('Kandidat');
-  var candRows = candSheet.getDataRange().getValues();
-  var candidates = [];
-  for (var i = 1; i < candRows.length; i++) {
-    if (!candRows[i][1]) continue;
-    candidates.push({
-      id: Number(candRows[i][0]) || i,
-      name: String(candRows[i][1]),
-      batch: String(candRows[i][2]),
-      photo: String(candRows[i][3] || ''),
-      votes: Number(candRows[i][4]) || 0
-    });
-  }
-
-  var voterSheet = ss.getSheetByName('Pemilih');
-  var voterRows = voterSheet.getDataRange().getValues();
-  var registeredUsers = {};
-  var voteRecords = {};
-  for (var j = 1; j < voterRows.length; j++) {
-    var email = String(voterRows[j][0] || '').trim().toLowerCase();
-    if (!email) continue;
-    var status = String(voterRows[j][3] || 'Belum');
-    var choiceIdsStr = String(voterRows[j][4] || '');
-    var voted = (status === 'Sudah');
-    registeredUsers[email] = {
-      email: email,
-      name: String(voterRows[j][1] || email),
-      loginTime: String(voterRows[j][2] || '-'),
-      voted: voted
-    };
-    if (voted && choiceIdsStr) {
-      voteRecords[email] = choiceIdsStr.split(',').map(function(x) { return Number(x.trim()); });
+    // ---------- Daftar email pemilih yang diizinkan (opsional) ----------
+    match /config/allowed {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['emails'])
+        && request.resource.data.emails is list
+        && request.resource.data.emails.size() <= 2000;
     }
-  }
 
-  var setSheet = ss.getSheetByName('Pengaturan');
-  var setRows = setSheet.getDataRange().getValues();
-  var settings = { isStarted: false, endTime: null, isPublished: false, durationMinutes: 15 };
-  for (var k = 1; k < setRows.length; k++) {
-    var key = String(setRows[k][0]);
-    var val = setRows[k][1];
-    if (key === 'isStarted') settings.isStarted = (val === true || val === 'true');
-    if (key === 'endTime') settings.endTime = val ? Number(val) : null;
-    if (key === 'isPublished') settings.isPublished = (val === true || val === 'true');
-    if (key === 'durationMinutes') settings.durationMinutes = Number(val) || 15;
-  }
-
-  return { candidates: candidates, registeredUsers: registeredUsers, voteRecords: voteRecords, settings: settings };
-}
-
-function upsertPemilihLogin(ss, user) {
-  if (!user || !user.email) return;
-  var sheet = ss.getSheetByName('Pemilih');
-  var rows = sheet.getDataRange().getValues();
-  var email = user.email.trim().toLowerCase();
-  for (var i = 1; i < rows.length; i++) {
-    if (String(rows[i][0]).trim().toLowerCase() === email) {
-      sheet.getRange(i + 1, 2).setValue(user.name);
-      sheet.getRange(i + 1, 3).setValue(user.loginTime);
-      return;
+    // ---------- Kandidat ----------
+    match /candidates/{cid} {
+      allow read: if canUse();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['id', 'name', 'batch', 'photo'])
+        && request.resource.data.id is int
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 100
+        && request.resource.data.batch in ['Batch 25', 'Batch 26']
+        && request.resource.data.photo is string
+        && request.resource.data.photo.size() < 400000;
+      allow delete: if isAdmin();
     }
-  }
-  sheet.appendRow([email, user.name, user.loginTime, 'Belum', '', '']);
-}
 
-function recordVoterBallot(ss, email, name, choices, choiceNames) {
-  var sheet = ss.getSheetByName('Pemilih');
-  var rows = sheet.getDataRange().getValues();
-  var cleanEmail = email.trim().toLowerCase();
-  var foundRow = -1;
-  for (var i = 1; i < rows.length; i++) {
-    if (String(rows[i][0]).trim().toLowerCase() === cleanEmail) {
-      if (String(rows[i][3]) === 'Sudah') return;
-      foundRow = i + 1;
-      break;
+    // ---------- Suara: 1 dokumen per akun, tidak bisa diubah ----------
+    match /votes/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && canUse()
+        && isElectionOpen()
+        && request.resource.data.keys().hasOnly(['email', 'name', 'choices', 'choiceNames', 'createdAt'])
+        && request.resource.data.email == myEmail()
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 100
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.choices is list
+        && request.resource.data.choices.size() == 2
+        && request.resource.data.choices[0] is string
+        && request.resource.data.choices[1] is string
+        && request.resource.data.choices[0].matches('[0-9]+')
+        && request.resource.data.choices[1].matches('[0-9]+')
+        && request.resource.data.choices[0] != request.resource.data.choices[1]
+        && exists(/databases/$(database)/documents/candidates/$(request.resource.data.choices[0]))
+        && exists(/databases/$(database)/documents/candidates/$(request.resource.data.choices[1]))
+        && request.resource.data.choiceNames is list
+        && request.resource.data.choiceNames.size() == 2;
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // ---------- Catatan login pemilih ----------
+    match /users/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow create, update: if signedIn()
+        && request.auth.uid == uid
+        && canUse()
+        && request.resource.data.keys().hasOnly(['email', 'name', 'loginAt'])
+        && request.resource.data.email == myEmail()
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 100
+        && request.resource.data.loginAt == request.time;
+      allow delete: if isAdmin();
+    }
+
+    // ---------- Hasil Top 3 yang dipublikasikan (hanya ada setelah admin publikasi) ----------
+    match /results/{rid} {
+      allow read: if canUse();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['top3', 'updatedAt'])
+        && request.resource.data.top3 is list
+        && request.resource.data.top3.size() <= 3
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if isAdmin();
     }
   }
-  var choiceIdStr = choices.join(', ');
-  var choiceNameStr = (choiceNames || []).join(' & ');
-  if (foundRow > 0) {
-    sheet.getRange(foundRow, 4, 1, 3).setValues([['Sudah', choiceIdStr, choiceNameStr]]);
-  } else {
-    sheet.appendRow([cleanEmail, name, new Date().toLocaleTimeString('id-ID'), 'Sudah', choiceIdStr, choiceNameStr]);
-  }
-
-  var candSheet = ss.getSheetByName('Kandidat');
-  var candRows = candSheet.getDataRange().getValues();
-  for (var c = 1; c < candRows.length; c++) {
-    var cid = Number(candRows[c][0]);
-    if (choices.indexOf(cid) !== -1) {
-      var curVotes = Number(candRows[c][4]) || 0;
-      candSheet.getRange(c + 1, 5).setValue(curVotes + 1);
-    }
-  }
-}
-
-function writeCandidatesToSheet(ss, candidates) {
-  var sheet = ss.getSheetByName('Kandidat');
-  sheet.clearContents();
-  sheet.appendRow(['ID', 'Nama', 'Batch', 'Foto', 'Jumlah_Suara']);
-  candidates.forEach(function(c) {
-    sheet.appendRow([c.id, c.name, c.batch, c.photo || '', c.votes || 0]);
-  });
-}
-
-function writeSettingsToSheet(ss, settings) {
-  var sheet = ss.getSheetByName('Pengaturan');
-  sheet.clearContents();
-  sheet.appendRow(['Key', 'Value']);
-  sheet.appendRow(['isStarted', Boolean(settings.isStarted)]);
-  sheet.appendRow(['endTime', settings.endTime || '']);
-  sheet.appendRow(['isPublished', Boolean(settings.isPublished)]);
-  sheet.appendRow(['durationMinutes', Number(settings.durationMinutes) || 15]);
-}
-
-function recalculateHasilVoting(ss) {
-  var candSheet = ss.getSheetByName('Kandidat');
-  var rows = candSheet.getDataRange().getValues();
-  var list = [];
-  var totalVotes = 0;
-  for (var i = 1; i < rows.length; i++) {
-    if (!rows[i][1]) continue;
-    var v = Number(rows[i][4]) || 0;
-    totalVotes += v;
-    list.push({ id: rows[i][0], name: rows[i][1], batch: rows[i][2], votes: v });
-  }
-  list.sort(function(a, b) { return b.votes - a.votes; });
-
-  var resSheet = ss.getSheetByName('Hasil_Voting');
-  resSheet.clearContents();
-  resSheet.appendRow(['Peringkat', 'ID', 'Nama_Kandidat', 'Batch', 'Total_Suara', 'Persentase']);
-  list.forEach(function(item, idx) {
-    var pct = totalVotes > 0 ? ((item.votes / totalVotes) * 100).toFixed(1) + '%' : '0%';
-    resSheet.appendRow([idx + 1, item.id, item.name, item.batch, item.votes, pct]);
-  });
-}
-
-function resetAllElectionSheets(ss, candidates, settings) {
-  var voterSheet = ss.getSheetByName('Pemilih');
-  voterSheet.clearContents();
-  voterSheet.appendRow(['Email', 'Nama', 'Waktu_Login', 'Status_Voting', 'Pilihan_ID', 'Pilihan_Kandidat']);
-  writeCandidatesToSheet(ss, candidates);
-  writeSettingsToSheet(ss, settings);
-  recalculateHasilVoting(ss);
-}
-
-function jsonResponse(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }`;
 
         // =========================================================================
-        // STATE MANAGEMENT (LOCALSTORAGE + GOOGLE SHEETS SYNC)
+        // STATE MANAGEMENT (FIREBASE AUTH + FIRESTORE REAL-TIME)
         // =========================================================================
-        const STORAGE_KEYS = {
-            CANDIDATES: 'pemira_estoc_candidates_v9',
-            CURRENT_USER: 'pemira_estoc_current_user_v9',
-            REGISTERED_USERS: 'pemira_estoc_registered_users_v9',
-            VOTE_RECORDS: 'pemira_estoc_vote_records_v9',
-            ELECTION_STATE: 'pemira_estoc_election_state_v9',
-            GAS_URL: 'pemira_estoc_gas_webapp_url_v9'
-        };
+        ['candidates', 'current_user', 'registered_users', 'vote_records', 'election_state', 'gas_webapp_url', 'saved_google_accounts'].forEach(k => {
+            try { localStorage.removeItem('pemira_estoc_' + k + '_v9'); } catch (e) {}
+        });
+        try { localStorage.removeItem('pemira_estoc_session_v10'); } catch (e) {}
 
-        try { localStorage.removeItem('pemira_estoc_saved_google_accounts_v9'); } catch (e) {}
-        (function captureApiUrlFromQuery() {
-            const params = new URLSearchParams(window.location.search);
-            const apiUrl = params.get('api');
-            if (apiUrl && apiUrl.startsWith('http')) {
-                localStorage.setItem(STORAGE_KEYS.GAS_URL, apiUrl.trim());
-            }
-        })();
-
-        let gasWebAppUrl = DEFAULT_GAS_URL || localStorage.getItem(STORAGE_KEYS.GAS_URL) || '';
+        let fbAuth = null;
+        let fbDb = null;
+        let unsubscribers = [];
+        let currentUser = null;
+        let justSignedIn = false;
+        let denying = false;
+        let serverOffset = 0;
+        let didSeedCandidates = false;
         let isSheetsConnected = false;
-        let isSyncingNow = false;
 
-        let candidates = JSON.parse(localStorage.getItem(STORAGE_KEYS.CANDIDATES)) || JSON.parse(JSON.stringify(DEFAULT_CANDIDATES));
-        let currentUser = JSON.parse(localStorage.getItem(STORAGE_KEYS.CURRENT_USER)) || null;
-        let registeredUsers = JSON.parse(localStorage.getItem(STORAGE_KEYS.REGISTERED_USERS)) || {};
-        let voteRecords = JSON.parse(localStorage.getItem(STORAGE_KEYS.VOTE_RECORDS)) || {};
-        let electionState = JSON.parse(localStorage.getItem(STORAGE_KEYS.ELECTION_STATE)) || {
+        let candidatesRaw = [];
+        let votesRaw = [];
+        let usersRaw = [];
+        let myVote = null;
+        let serverTop3 = null;
+
+        let candidates = [];
+        let registeredUsers = {};
+        let voteRecords = {};
+        let electionState = {
             isStarted: false,
             endTime: null,
             isPublished: false,
@@ -1178,12 +1062,13 @@ function jsonResponse(obj) {
         let top3ChartInstance = null;
         let researchChartInstance = null;
         let timerInterval = null;
-        let pollingInterval = null;
+
+        const FV = () => firebase.firestore.FieldValue;
 
         // =========================================================================
         // INISIALISASI APLIKASI
         // =========================================================================
-        window.onload = async function() {
+        window.onload = function() {
             Chart.defaults.color = '#CBD5E1';
             Chart.defaults.borderColor = 'rgba(255,255,255,0.08)';
             // Render Logo ESTOC (Putih) beresolusi tinggi di 3 tempat utama
@@ -1196,83 +1081,166 @@ function jsonResponse(obj) {
             const resultsLogoBox = document.getElementById('results-estoc-logo-container');
             if (resultsLogoBox) resultsLogoBox.innerHTML = renderEstocFullLogoSVG('results');
 
-            document.getElementById('apps-script-code-block').textContent = GOOGLE_APPS_SCRIPT_TEMPLATE;
-            const urlInput = document.getElementById('gas-webapp-url');
-            if (urlInput && gasWebAppUrl) {
-                urlInput.value = gasWebAppUrl;
-            }
+            document.getElementById('apps-script-code-block').textContent = FIRESTORE_RULES_TEMPLATE;
 
-            updateDatabaseStatusUI(false);
-
-            if (gasWebAppUrl) {
-                await pullStateFromSheets(true);
-            }
-
-            checkAuthOverlay();
-            if (currentUser) {
-                currentTab = (currentUser.role === 'ADMIN') ? 'admin' : 'voting';
-                initAppSession();
-            }
-
-            startAutoSyncPolling();
+            initFirebase();
             lucide.createIcons();
         };
 
-        // =========================================================================
-        // 1. AUTENTIKASI AKUN GOOGLE & PENCATATAN LOGIN
-        // =========================================================================
-        function handleLoginSubmit(e) {
-            e.preventDefault();
-            const name = document.getElementById('auth-name').value.trim();
-            const email = document.getElementById('auth-email').value.trim().toLowerCase();
-            if (!name || !email) return;
-            processGoogleLogin(name, email);
-        }
-
-        async function processGoogleLogin(name, email) {
-            const cleanEmail = email.trim().toLowerCase();
-            const role = (cleanEmail === ADMIN_EMAIL) ? 'ADMIN' : 'VOTER';
-            const loginTimeStr = new Date().toLocaleString('id-ID', {
-                day: '2-digit', month: 'short', year: 'numeric',
-                hour: '2-digit', minute: '2-digit', second: '2-digit'
-            });
-
-            currentUser = { name, email: cleanEmail, role };
-            localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(currentUser));
-
-            const alreadyVoted = voteRecords[cleanEmail] !== undefined;
-            registeredUsers[cleanEmail] = {
-                name,
-                email: cleanEmail,
-                loginTime: registeredUsers[cleanEmail]?.loginTime || loginTimeStr,
-                voted: alreadyVoted
-            };
-            localStorage.setItem(STORAGE_KEYS.REGISTERED_USERS, JSON.stringify(registeredUsers));
-
-            if (gasWebAppUrl) {
-                pushActionToSheets('login', {
-                    user: {
-                        name,
-                        email: cleanEmail,
-                        loginTime: registeredUsers[cleanEmail].loginTime
-                    }
-                });
+        function initFirebase() {
+            const warn = document.getElementById('login-config-warning');
+            const missing = ['apiKey', 'authDomain', 'projectId', 'appId'].filter(k => !FIREBASE_CONFIG[k]);
+            if (missing.length > 0 || typeof firebase === 'undefined') {
+                warn.innerHTML = typeof firebase === 'undefined' && missing.length === 0
+                    ? 'Gagal memuat Firebase. Periksa koneksi internet lalu muat ulang halaman.'
+                    : `Aplikasi belum dikonfigurasi. Isi <code>FIREBASE_CONFIG</code> (${missing.join(', ')}) di bagian atas script <code>index.html</code>, lalu unggah ulang.`;
+                warn.classList.remove('hidden');
+                document.getElementById('google-signin-wrap').classList.add('hidden');
+                updateDatabaseStatusUI(false, 'Belum dikonfigurasi');
+                return;
             }
 
+            firebase.initializeApp(FIREBASE_CONFIG);
+            fbAuth = firebase.auth();
+            fbDb = firebase.firestore();
+            updateDatabaseStatusUI(true);
+            fbAuth.onAuthStateChanged(handleAuthChanged);
+        }
+
+        // =========================================================================
+        // 1. LOGIN GOOGLE (FIREBASE AUTHENTICATION)
+        // =========================================================================
+        function showLoginError(msg) {
+            const el = document.getElementById('login-error');
+            if (!el) return;
+            el.textContent = msg;
+            el.classList.remove('hidden');
+        }
+        function hideLoginError() {
+            const el = document.getElementById('login-error');
+            if (el) el.classList.add('hidden');
+        }
+        function setLoginLoading(on) {
+            const el = document.getElementById('login-loading');
+            if (el) el.classList.toggle('hidden', !on);
+            const wrap = document.getElementById('google-signin-wrap');
+            if (wrap) {
+                wrap.style.opacity = on ? '0.5' : '1';
+                wrap.style.pointerEvents = on ? 'none' : 'auto';
+            }
+        }
+
+        function dbErrorMessage(err) {
+            const code = err && err.code ? err.code : '';
+            if (code === 'permission-denied') return 'Ditolak oleh aturan keamanan database (bukan admin, sesi tidak aktif, atau suara sudah tercatat).';
+            if (code === 'unavailable') return 'Tidak ada koneksi ke server. Periksa internet Anda.';
+            if (code === 'not-found' || code === 'failed-precondition') return 'Database Firestore belum dibuat di Firebase Console.';
+            return (err && err.message) ? err.message : 'Terjadi kesalahan tak terduga.';
+        }
+
+        async function signInWithGoogle() {
+            if (!fbAuth) return;
+            hideLoginError();
+            setLoginLoading(true);
+            try {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                provider.setCustomParameters({ prompt: 'select_account' });
+                justSignedIn = true;
+                await fbAuth.signInWithPopup(provider);
+            } catch (err) {
+                justSignedIn = false;
+                const code = err && err.code;
+                if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+                    // dibatalkan pengguna, tidak perlu pesan
+                } else if (code === 'auth/popup-blocked') {
+                    showLoginError('Jendela login diblokir browser. Izinkan popup untuk situs ini, lalu coba lagi.');
+                } else if (code === 'auth/unauthorized-domain') {
+                    showLoginError('Domain situs ini belum diizinkan di Firebase (Authentication > Settings > Authorized domains).');
+                } else if (code === 'auth/operation-not-allowed') {
+                    showLoginError('Login Google belum diaktifkan di Firebase (Authentication > Sign-in method).');
+                } else if (code === 'auth/network-request-failed') {
+                    showLoginError('Tidak ada koneksi internet. Coba lagi.');
+                } else {
+                    showLoginError('Login gagal: ' + ((err && err.message) || 'kesalahan tak dikenal'));
+                }
+            } finally {
+                setLoginLoading(false);
+            }
+        }
+
+        async function handleAuthChanged(user) {
+            detachListeners();
+            if (!user) {
+                currentUser = null;
+                resetLocalViewState();
+                checkAuthOverlay();
+                return;
+            }
+
+            const email = (user.email || '').toLowerCase();
+            currentUser = {
+                name: (user.displayName || email).slice(0, 100),
+                email,
+                uid: user.uid,
+                role: ADMIN_EMAILS.map(e => e.toLowerCase()).includes(email) ? 'ADMIN' : 'VOTER'
+            };
+
+            // Catat waktu login (juga berfungsi sebagai uji akses: ditolak jika email tidak diizinkan)
+            try {
+                await fbDb.collection('users').doc(user.uid).set({
+                    email,
+                    name: currentUser.name,
+                    loginAt: FV().serverTimestamp()
+                });
+            } catch (err) {
+                console.error('Login record error:', err);
+                if (err && err.code === 'permission-denied') {
+                    await denyAccess(currentUser.role === 'ADMIN');
+                    return;
+                }
+            }
+
+            currentTab = (currentUser.role === 'ADMIN') ? 'admin' : 'voting';
+            attachListeners();
             checkAuthOverlay();
-            currentTab = (role === 'ADMIN') ? 'admin' : 'voting';
             initAppSession();
-            showToast(role === 'ADMIN'
-                ? `Selamat datang Administrator (${name})!`
-                : `Berhasil masuk sebagai ${name}`);
+            if (justSignedIn) {
+                justSignedIn = false;
+                showToast(currentUser.role === 'ADMIN'
+                    ? `Selamat datang Administrator (${currentUser.name})!`
+                    : `Berhasil masuk sebagai ${currentUser.name}`);
+            }
+        }
+
+        async function denyAccess(wasAdmin) {
+            if (denying) return;
+            denying = true;
+            const email = currentUser ? currentUser.email : '';
+            try { await fbAuth.signOut(); } catch (e) {}
+            showLoginError(wasAdmin
+                ? 'Akses ditolak oleh Firebase. Pastikan aturan keamanan (firestore.rules) sudah dipasang dan email admin di dalamnya benar.'
+                : `Akun ${email} tidak terdaftar sebagai pemilih atau tidak memiliki akses. Hubungi panitia.`);
+            denying = false;
+        }
+
+        function resetLocalViewState() {
+            selectedCandidateIds = [];
+            candidatesRaw = [];
+            votesRaw = [];
+            usersRaw = [];
+            myVote = null;
+            serverTop3 = null;
+            didSeedCandidates = false;
+            candidates = [];
+            registeredUsers = {};
+            voteRecords = {};
+            electionState = { isStarted: false, endTime: null, isPublished: false, durationMinutes: 15 };
         }
 
         function handleLogout() {
-            currentUser = null;
-            selectedCandidateIds = [];
-            localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
-            checkAuthOverlay();
-            showToast("Anda telah keluar dari sesi.");
+            if (!fbAuth) return;
+            hideLoginError();
+            fbAuth.signOut().then(() => showToast("Anda telah keluar dari sesi."));
         }
 
         function checkAuthOverlay() {
@@ -1305,18 +1273,18 @@ function jsonResponse(obj) {
                     ? 'w-2.5 h-2.5 rounded-full bg-[#16A34A]'
                     : 'w-2.5 h-2.5 rounded-full bg-amber-500';
                 loginText.textContent = connected
-                    ? 'Terhubung ke Google Sheets'
-                    : 'Mode Penyimpanan Lokal';
+                    ? 'Database siap digunakan'
+                    : (customLabel || 'Database belum terhubung');
             }
 
             const headerPill = document.getElementById('header-sync-pill');
             if (headerPill) {
                 if (connected) {
                     headerPill.className = 'hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#16A34A]/20 text-emerald-300 border border-[#16A34A]/40';
-                    headerPill.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-[#16A34A]"></span> Google Sheets Live`;
+                    headerPill.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-[#16A34A]"></span> Firebase Live`;
                 } else {
                     headerPill.className = 'hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-200 border border-amber-400/30';
-                    headerPill.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Mode Lokal`;
+                    headerPill.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Offline`;
                 }
             }
 
@@ -1324,138 +1292,176 @@ function jsonResponse(obj) {
             if (adminBadge) {
                 if (connected) {
                     adminBadge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#16A34A]/10 text-[#4ADE80] border border-[#16A34A]/25';
-                    adminBadge.innerHTML = `<span class="relative flex h-2 w-2"><span class="animate-pulse-ring absolute inline-flex h-full w-full rounded-full bg-[#16A34A] opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-[#16A34A]"></span></span> Terhubung ke Google Sheets`;
+                    adminBadge.innerHTML = `<span class="relative flex h-2 w-2"><span class="animate-pulse-ring absolute inline-flex h-full w-full rounded-full bg-[#16A34A] opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-[#16A34A]"></span></span> Terhubung ke Firebase`;
                 } else {
                     adminBadge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-300';
-                    adminBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span> ${customLabel || 'Mode Offline / Lokal'}`;
+                    adminBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span> ${escapeHtml(customLabel || 'Offline')}`;
                 }
             }
         }
 
-        async function connectAndSyncSheets() {
-            const input = document.getElementById('gas-webapp-url');
-            const url = input.value.trim();
-            if (!url || !url.startsWith('http')) {
-                showToast("Masukkan URL Web App Google Apps Script yang valid!", "error");
+        function detachListeners() {
+            unsubscribers.forEach(fn => { try { fn(); } catch (e) {} });
+            unsubscribers = [];
+        }
+
+        function handleListenerError(err) {
+            console.error('Listener error:', err);
+            if (err && err.code === 'permission-denied' && currentUser) {
+                denyAccess(currentUser.role === 'ADMIN');
                 return;
             }
+            updateDatabaseStatusUI(false, 'Gagal Terhubung');
+        }
 
-            gasWebAppUrl = url;
-            localStorage.setItem(STORAGE_KEYS.GAS_URL, gasWebAppUrl);
+        function attachListeners() {
+            const isAdmin = currentUser.role === 'ADMIN';
 
-            const btn = document.getElementById('btn-connect-sheets');
-            btn.disabled = true;
-            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Menghubungkan...</span>`;
-            lucide.createIcons();
-
-            try {
-                const res = await fetch(`${gasWebAppUrl}?action=getAll&t=${Date.now()}`);
-                const json = await res.json();
-
-                if (json.status === 'ok' && json.data) {
-                    if (!json.data.candidates || json.data.candidates.length === 0) {
-                        await pushActionToSheets('initSync', {
-                            candidates: candidates,
-                            settings: electionState
-                        });
-                        showToast("Terhubung! Data 13 kandidat berhasil disinkronkan ke Google Sheets.");
-                    } else {
-                        applyRemoteState(json.data);
-                        showToast("Berhasil terhubung & memuat data dari Google Sheets!");
-                    }
-                    updateDatabaseStatusUI(true);
-                    updateLastSyncTimestamp();
-                } else {
-                    throw new Error(json.message || "Respon tidak valid dari Apps Script");
+            unsubscribers.push(fbDb.doc('config/election').onSnapshot(snap => {
+                applyElectionSnapshot(snap);
+                updateDatabaseStatusUI(!snap.metadata.fromCache);
+                updateLastSyncTimestamp();
+                if (isAdmin && !snap.exists && !snap.metadata.fromCache) {
+                    fbDb.doc('config/election').set({ isStarted: false, isPublished: false, durationMinutes: 15 }).catch(() => {});
                 }
-            } catch (err) {
-                console.error("Sheets connection error:", err);
-                updateDatabaseStatusUI(false, "Gagal Terhubung");
-                showToast("Gagal terhubung. Pastikan Web App di-deploy dengan akses 'Anyone'.", "error");
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = `<i data-lucide="refresh-cw" class="w-4 h-4"></i><span>Hubungkan & Sinkronisasi</span>`;
-                lucide.createIcons();
+            }, handleListenerError));
+
+            unsubscribers.push(fbDb.collection('candidates').onSnapshot(snap => {
+                candidatesRaw = snap.docs.map(d => d.data());
+                if (candidatesRaw.length > 0) didSeedCandidates = true;
+                recomputeDerived();
+                if (isAdmin && snap.empty && !snap.metadata.fromCache && !didSeedCandidates) {
+                    didSeedCandidates = true;
+                    seedDefaultCandidates();
+                }
+            }, handleListenerError));
+
+            unsubscribers.push(fbDb.doc('votes/' + currentUser.uid).onSnapshot(snap => {
+                myVote = snap.exists ? (snap.data().choices || []).map(Number) : null;
+                recomputeDerived();
+            }, handleListenerError));
+
+            unsubscribers.push(fbDb.doc('results/final').onSnapshot(snap => {
+                serverTop3 = snap.exists ? (snap.data().top3 || []) : null;
+                refreshActiveViews();
+            }, handleListenerError));
+
+            if (isAdmin) {
+                unsubscribers.push(fbDb.collection('votes').onSnapshot(snap => {
+                    votesRaw = snap.docs.map(d => ({ docId: d.id, ...d.data() }));
+                    recomputeDerived();
+                }, handleListenerError));
+
+                unsubscribers.push(fbDb.collection('users').onSnapshot(snap => {
+                    usersRaw = snap.docs.map(d => d.data());
+                    recomputeDerived();
+                }, handleListenerError));
+
+                unsubscribers.push(fbDb.doc('config/allowed').onSnapshot(snap => {
+                    const list = snap.exists ? (snap.data().emails || []) : [];
+                    renderAllowedEmails(list);
+                }, handleListenerError));
             }
         }
 
-        async function manualSyncFromSheets() {
-            if (!gasWebAppUrl) {
-                showToast("Tempelkan URL Web App Google Apps Script terlebih dahulu.", "error");
-                return;
-            }
-            const btn = document.getElementById('btn-refresh-sheets');
-            btn.disabled = true;
-            await pullStateFromSheets(false);
-            btn.disabled = false;
-            showToast("Data berhasil diperbarui dari Google Spreadsheet.");
+        function applyElectionSnapshot(snap) {
+            const d = snap.exists ? snap.data({ serverTimestamps: 'estimate' }) : {};
+            const dur = Number(d.durationMinutes) || 15;
+            let endTime = null;
+            if (d.isStarted && d.startedAt) endTime = d.startedAt.toMillis() + dur * 60000;
+            const started = !!d.isStarted && (!endTime || Date.now() < endTime);
+            electionState = {
+                isStarted: started,
+                endTime: started ? endTime : null,
+                isPublished: !!d.isPublished,
+                durationMinutes: dur
+            };
+            refreshActiveViews();
         }
 
-        async function pullStateFromSheets(silent = true) {
-            if (!gasWebAppUrl || isSyncingNow) return;
-            isSyncingNow = true;
+        function formatTimestamp(ts) {
             try {
-                const res = await fetch(`${gasWebAppUrl}?action=getAll&t=${Date.now()}`);
-                const json = await res.json();
-                if (json.status === 'ok' && json.data) {
-                    applyRemoteState(json.data);
-                    updateDatabaseStatusUI(true);
-                    updateLastSyncTimestamp();
-                }
-            } catch (err) {
-                if (!silent) {
-                    showToast("Gagal menyinkronkan data dari Google Sheets.", "error");
-                }
-                updateDatabaseStatusUI(false);
-            } finally {
-                isSyncingNow = false;
-            }
-        }
-
-        async function pushActionToSheets(action, payloadObj) {
-            if (!gasWebAppUrl) return false;
-            try {
-                const body = JSON.stringify({ action, ...payloadObj });
-                const res = await fetch(gasWebAppUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: body
+                return ts.toDate().toLocaleString('id-ID', {
+                    day: '2-digit', month: 'short', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit', second: '2-digit'
                 });
-                const json = await res.json();
-                if (json.status === 'ok' && json.data) {
-                    applyRemoteState(json.data);
-                    updateDatabaseStatusUI(true);
-                    updateLastSyncTimestamp();
-                    return true;
-                }
-            } catch (err) {
-                console.error("Push to Sheets failed:", err);
-                updateDatabaseStatusUI(false);
-            }
-            return false;
+            } catch (e) { return '-'; }
         }
 
-        function applyRemoteState(remoteData) {
-            if (remoteData.candidates && remoteData.candidates.length > 0) {
-                candidates = remoteData.candidates.map(rc => ({
-                    ...rc,
-                    photo: rc.photo || createInitialsAvatar(rc.name, rc.batch)
+        // Susun ulang data tampilan dari data mentah Firestore
+        function recomputeDerived() {
+            if (!currentUser) return;
+            const isAdmin = currentUser.role === 'ADMIN';
+
+            const counts = {};
+            if (isAdmin) {
+                votesRaw.forEach(v => (v.choices || []).forEach(ch => { counts[String(ch)] = (counts[String(ch)] || 0) + 1; }));
+            }
+            candidates = [...candidatesRaw]
+                .sort((a, b) => a.id - b.id)
+                .map(c => ({
+                    ...c,
+                    votes: isAdmin ? (counts[String(c.id)] || 0) : 0,
+                    photo: c.photo || createInitialsAvatar(c.name, c.batch)
                 }));
-                localStorage.setItem(STORAGE_KEYS.CANDIDATES, JSON.stringify(candidates));
+
+            voteRecords = {};
+            if (isAdmin) {
+                votesRaw.forEach(v => { if (v.email) voteRecords[v.email] = (v.choices || []).map(Number); });
+            } else if (myVote) {
+                voteRecords[currentUser.email] = myVote;
             }
-            if (remoteData.registeredUsers) {
-                registeredUsers = remoteData.registeredUsers;
-                localStorage.setItem(STORAGE_KEYS.REGISTERED_USERS, JSON.stringify(registeredUsers));
-            }
-            if (remoteData.voteRecords) {
-                voteRecords = remoteData.voteRecords;
-                localStorage.setItem(STORAGE_KEYS.VOTE_RECORDS, JSON.stringify(voteRecords));
-            }
-            if (remoteData.settings) {
-                electionState = { ...electionState, ...remoteData.settings };
-                localStorage.setItem(STORAGE_KEYS.ELECTION_STATE, JSON.stringify(electionState));
+
+            registeredUsers = {};
+            if (isAdmin) {
+                usersRaw.forEach(u => {
+                    registeredUsers[u.email] = { email: u.email, name: u.name, loginTime: u.loginAt ? formatTimestamp(u.loginAt) : '-', voted: false };
+                });
+                votesRaw.forEach(v => {
+                    if (!registeredUsers[v.email]) registeredUsers[v.email] = { email: v.email, name: v.name, loginTime: '-', voted: true };
+                    registeredUsers[v.email].voted = true;
+                });
             }
             refreshActiveViews();
+        }
+
+        async function seedDefaultCandidates() {
+            try {
+                const batch = fbDb.batch();
+                DEFAULT_CANDIDATES.forEach(c => {
+                    batch.set(fbDb.collection('candidates').doc(String(c.id)), { id: c.id, name: c.name, batch: c.batch, photo: c.photo });
+                });
+                await batch.commit();
+                showToast("Database kosong: 13 kandidat awal berhasil dimuat.");
+            } catch (err) {
+                didSeedCandidates = false;
+                showToast(dbErrorMessage(err), "error");
+            }
+        }
+
+        function renderAllowedEmails(list) {
+            const input = document.getElementById('allowed-emails-input');
+            if (input && document.activeElement !== input) input.value = list.join('\n');
+            const badge = document.getElementById('allowed-count');
+            if (badge) badge.textContent = list.length === 0 ? 'Semua akun diizinkan' : `${list.length} email diizinkan`;
+        }
+
+        async function saveAllowedEmails() {
+            const raw = document.getElementById('allowed-emails-input').value;
+            const emails = [...new Set(raw.split(/[\s,;]+/).map(e => e.trim().toLowerCase()).filter(Boolean))];
+            const bad = emails.filter(e => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e));
+            if (bad.length > 0) {
+                showToast(`Format email tidak valid: ${bad[0]}`, "error");
+                return;
+            }
+            try {
+                await fbDb.doc('config/allowed').set({ emails });
+                showToast(emails.length === 0
+                    ? "Daftar dikosongkan: semua akun Google boleh memilih."
+                    : `Daftar disimpan: ${emails.length} email diizinkan.`);
+            } catch (err) {
+                showToast(dbErrorMessage(err), "error");
+            }
         }
 
         function refreshActiveViews() {
@@ -1473,34 +1479,16 @@ function jsonResponse(obj) {
             }
         }
 
-        function startAutoSyncPolling() {
-            if (pollingInterval) clearInterval(pollingInterval);
-            pollingInterval = setInterval(() => {
-                if (gasWebAppUrl) {
-                    pullStateFromSheets(true);
-                }
-            }, 5000);
-        }
-
         function updateLastSyncTimestamp() {
             const el = document.getElementById('last-sync-label');
             if (el) {
                 const now = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                el.textContent = `Terakhir sinkronisasi: ${now} (Auto-sync aktif setiap 5 detik)`;
+                el.textContent = `Terakhir diperbarui: ${now} (real-time)`;
             }
         }
 
         function copyShareableVoterLink() {
-            const urlInput = document.getElementById('gas-webapp-url');
-            const currentUrl = (urlInput && urlInput.value.trim()) || gasWebAppUrl;
-            if (!currentUrl) {
-                showToast("Masukkan dan hubungkan URL Web App terlebih dahulu sebelum menyalin link!", "error");
-                return;
-            }
-            const baseUrl = `${window.location.origin}${window.location.pathname}`;
-            const shareUrl = (DEFAULT_GAS_URL && currentUrl === DEFAULT_GAS_URL)
-                ? baseUrl
-                : `${baseUrl}?api=${encodeURIComponent(currentUrl)}`;
+            const shareUrl = `${window.location.origin}${window.location.pathname}`;
             copyTextToClipboard(shareUrl, "Link Pemilih berhasil disalin! Bagikan ke pemilih.");
         }
 
@@ -1514,7 +1502,7 @@ function jsonResponse(obj) {
         }
 
         function copyAppsScriptCode() {
-            copyTextToClipboard(GOOGLE_APPS_SCRIPT_TEMPLATE, "Kode Google Apps Script berhasil disalin!");
+            copyTextToClipboard(FIRESTORE_RULES_TEMPLATE, "Aturan keamanan berhasil disalin!");
         }
 
         // =========================================================================
@@ -1659,44 +1647,57 @@ function jsonResponse(obj) {
         }
 
         async function startElection() {
-            const minutes = Math.max(1, parseInt(document.getElementById('admin-duration-input').value) || 15);
-            const endTime = Date.now() + minutes * 60 * 1000;
-
-            electionState.isStarted = true;
-            electionState.endTime = endTime;
-            electionState.durationMinutes = minutes;
-            localStorage.setItem(STORAGE_KEYS.ELECTION_STATE, JSON.stringify(electionState));
-
-            refreshActiveViews();
-            if (gasWebAppUrl) {
-                await pushActionToSheets('updateSettings', { settings: electionState });
+            const minutes = Math.max(1, Math.min(1440, parseInt(document.getElementById('admin-duration-input').value) || 15));
+            try {
+                const batch = fbDb.batch();
+                batch.set(fbDb.doc('config/election'), {
+                    isStarted: true,
+                    startedAt: FV().serverTimestamp(),
+                    durationMinutes: minutes,
+                    isPublished: false
+                });
+                batch.delete(fbDb.doc('results/final'));
+                await batch.commit();
+                showToast(`Sesi voting dimulai selama ${minutes} menit!`);
+            } catch (err) {
+                showToast(dbErrorMessage(err), "error");
             }
-            showToast(`Sesi voting dimulai selama ${minutes} menit!`);
         }
 
         async function stopElection() {
-            electionState.isStarted = false;
-            electionState.endTime = null;
-            localStorage.setItem(STORAGE_KEYS.ELECTION_STATE, JSON.stringify(electionState));
-
-            refreshActiveViews();
-            if (gasWebAppUrl) {
-                await pushActionToSheets('updateSettings', { settings: electionState });
+            try {
+                await fbDb.doc('config/election').update({ isStarted: false });
+                showToast("Sesi voting telah dihentikan.");
+            } catch (err) {
+                showToast(dbErrorMessage(err), "error");
             }
-            showToast("Sesi voting telah dihentikan.");
         }
 
         async function togglePublishResults() {
-            electionState.isPublished = !electionState.isPublished;
-            localStorage.setItem(STORAGE_KEYS.ELECTION_STATE, JSON.stringify(electionState));
-
-            refreshActiveViews();
-            if (gasWebAppUrl) {
-                await pushActionToSheets('updateSettings', { settings: electionState });
+            try {
+                const batch = fbDb.batch();
+                if (!electionState.isPublished) {
+                    if (electionState.isStarted) {
+                        showToast("Hentikan sesi voting terlebih dahulu sebelum mempublikasikan hasil.", "error");
+                        return;
+                    }
+                    const top3 = [...candidates]
+                        .sort((a, b) => (b.votes || 0) - (a.votes || 0))
+                        .slice(0, 3)
+                        .map(c => ({ id: c.id, votes: c.votes || 0 }));
+                    batch.set(fbDb.doc('results/final'), { top3, updatedAt: FV().serverTimestamp() });
+                    batch.update(fbDb.doc('config/election'), { isPublished: true });
+                    await batch.commit();
+                    showToast("Hasil Top 3 telah dipublikasikan kepada seluruh pemilih!");
+                } else {
+                    batch.delete(fbDb.doc('results/final'));
+                    batch.update(fbDb.doc('config/election'), { isPublished: false });
+                    await batch.commit();
+                    showToast("Hasil Top 3 disembunyikan kembali dari pemilih.");
+                }
+            } catch (err) {
+                showToast(dbErrorMessage(err), "error");
             }
-            showToast(electionState.isPublished
-                ? "Hasil Top 3 telah dipublikasikan kepada seluruh pemilih!"
-                : "Hasil Top 3 disembunyikan kembali dari pemilih.");
         }
 
         function renderAdminVotersTable() {
@@ -1807,7 +1808,7 @@ function jsonResponse(obj) {
             document.getElementById('candidate-photo-file').value = "";
             tempCompressedPhoto = "";
             document.getElementById('candidate-photo-preview').src = createInitialsAvatar("Kandidat Baru", "Batch 25");
-            document.getElementById('photo-compression-info').textContent = "Otomatis dikompresi maks 280x280px (JPEG) agar aman disimpan di Google Sheets.";
+            document.getElementById('photo-compression-info').textContent = "Otomatis dikompresi maks 280x280px (JPEG) agar aman disimpan di database.";
             document.getElementById('candidate-modal').classList.remove('hidden');
         }
 
@@ -1865,7 +1866,7 @@ function jsonResponse(obj) {
                     const approxKb = Math.round((compressedDataUrl.length * 3) / 4 / 1024);
                     document.getElementById('candidate-photo-preview').src = compressedDataUrl;
                     document.getElementById('photo-compression-info').textContent =
-                        `Terkompresi: ${width}x${height}px JPEG (~${approxKb} KB) • Siap simpan ke Google Sheets`;
+                        `Terkompresi: ${width}x${height}px JPEG (~${approxKb} KB) • Siap disimpan`;
                 };
                 img.src = event.target.result;
             };
@@ -1875,32 +1876,21 @@ function jsonResponse(obj) {
         async function saveCandidate(e) {
             e.preventDefault();
             const editId = document.getElementById('candidate-edit-id').value;
-            const name = document.getElementById('candidate-name').value.trim();
+            const name = document.getElementById('candidate-name').value.trim().slice(0, 100);
             const batch = document.getElementById('candidate-batch').value;
             if (!name) return;
 
             const finalPhoto = tempCompressedPhoto || createInitialsAvatar(name, batch);
+            const id = editId === ""
+                ? (candidates.length > 0 ? Math.max(...candidates.map(c => c.id)) + 1 : 1)
+                : Number(editId);
 
-            if (editId === "") {
-                const newId = candidates.length > 0 ? Math.max(...candidates.map(c => c.id)) + 1 : 1;
-                candidates.push({ id: newId, name, batch, photo: finalPhoto, votes: 0 });
-                showToast("Kandidat baru berhasil ditambahkan!");
-            } else {
-                const idx = candidates.findIndex(c => c.id == editId);
-                if (idx >= 0) {
-                    candidates[idx].name = name;
-                    candidates[idx].batch = batch;
-                    candidates[idx].photo = finalPhoto;
-                    showToast("Data kandidat berhasil diperbarui!");
-                }
-            }
-
-            localStorage.setItem(STORAGE_KEYS.CANDIDATES, JSON.stringify(candidates));
-            closeCandidateModal();
-            refreshActiveViews();
-
-            if (gasWebAppUrl) {
-                await pushActionToSheets('saveCandidates', { candidates });
+            try {
+                await fbDb.collection('candidates').doc(String(id)).set({ id, name, batch, photo: finalPhoto });
+                closeCandidateModal();
+                showToast(editId === "" ? "Kandidat baru berhasil ditambahkan!" : "Data kandidat berhasil diperbarui!");
+            } catch (err) {
+                showToast(dbErrorMessage(err), "error");
             }
         }
 
@@ -1913,13 +1903,12 @@ function jsonResponse(obj) {
                 confirmText: "Ya, Hapus",
                 isDanger: true,
                 onConfirm: async () => {
-                    candidates = candidates.filter(item => item.id !== id);
-                    localStorage.setItem(STORAGE_KEYS.CANDIDATES, JSON.stringify(candidates));
-                    refreshActiveViews();
-                    if (gasWebAppUrl) {
-                        await pushActionToSheets('saveCandidates', { candidates });
+                    try {
+                        await fbDb.collection('candidates').doc(String(id)).delete();
+                        showToast("Kandidat berhasil dihapus.");
+                    } catch (err) {
+                        showToast(dbErrorMessage(err), "error");
                     }
-                    showToast("Kandidat berhasil dihapus.");
                 }
             });
         }
@@ -1927,34 +1916,26 @@ function jsonResponse(obj) {
         function confirmResetElectionData() {
             openConfirmModal({
                 title: "Reset Seluruh Data Pemilihan?",
-                message: "Tindakan ini akan menghapus seluruh suara masuk, riwayat pemilih, dan mengatur ulang suara semua kandidat ke 0 (baik di aplikasi maupun di Google Sheets).",
+                message: "Tindakan ini akan menghapus seluruh suara masuk, menyembunyikan hasil, dan mengatur ulang perolehan suara semua kandidat ke 0. Daftar kandidat tidak dihapus.",
                 confirmText: "Reset Semua Data",
                 isDanger: true,
                 onConfirm: async () => {
-                    voteRecords = {};
-                    registeredUsers = {};
-                    if (currentUser) {
-                        registeredUsers[currentUser.email] = {
-                            name: currentUser.name,
-                            email: currentUser.email,
-                            loginTime: new Date().toLocaleString('id-ID'),
-                            voted: false
-                        };
+                    try {
+                        const refs = votesRaw.map(v => fbDb.collection('votes').doc(v.docId));
+                        for (let i = 0; i < refs.length; i += 400) {
+                            const batch = fbDb.batch();
+                            refs.slice(i, i + 400).forEach(r => batch.delete(r));
+                            await batch.commit();
+                        }
+                        const last = fbDb.batch();
+                        last.set(fbDb.doc('config/election'), { isStarted: false, isPublished: false, durationMinutes: 15 });
+                        last.delete(fbDb.doc('results/final'));
+                        await last.commit();
+                        selectedCandidateIds = [];
+                        showToast("Seluruh data pemilu berhasil direset.");
+                    } catch (err) {
+                        showToast(dbErrorMessage(err), "error");
                     }
-                    candidates.forEach(c => c.votes = 0);
-                    electionState = { isStarted: false, endTime: null, isPublished: false, durationMinutes: 15 };
-                    selectedCandidateIds = [];
-
-                    localStorage.setItem(STORAGE_KEYS.VOTE_RECORDS, JSON.stringify(voteRecords));
-                    localStorage.setItem(STORAGE_KEYS.REGISTERED_USERS, JSON.stringify(registeredUsers));
-                    localStorage.setItem(STORAGE_KEYS.CANDIDATES, JSON.stringify(candidates));
-                    localStorage.setItem(STORAGE_KEYS.ELECTION_STATE, JSON.stringify(electionState));
-
-                    refreshActiveViews();
-                    if (gasWebAppUrl) {
-                        await pushActionToSheets('resetAll', { candidates, settings: electionState });
-                    }
-                    showToast("Seluruh data pemilu berhasil direset.");
                 }
             });
         }
@@ -1976,16 +1957,12 @@ function jsonResponse(obj) {
                     return;
                 }
 
-                const remaining = electionState.endTime - Date.now();
+                const remaining = electionState.endTime - (Date.now() + serverOffset);
                 if (remaining <= 0) {
                     electionState.isStarted = false;
                     electionState.endTime = null;
-                    localStorage.setItem(STORAGE_KEYS.ELECTION_STATE, JSON.stringify(electionState));
                     refreshActiveViews();
                     showToast("Waktu sesi pemilihan telah habis!", "error");
-                    if (currentUser && currentUser.role === 'ADMIN' && gasWebAppUrl) {
-                        pushActionToSheets('updateSettings', { settings: electionState });
-                    }
                 } else {
                     const mins = Math.floor(remaining / 60000);
                     const secs = Math.floor((remaining % 60000) / 1000);
@@ -2238,33 +2215,21 @@ function jsonResponse(obj) {
                 return c ? c.name : '';
             });
 
-            voteRecords[currentUser.email] = choices;
-            localStorage.setItem(STORAGE_KEYS.VOTE_RECORDS, JSON.stringify(voteRecords));
-
-            if (registeredUsers[currentUser.email]) {
-                registeredUsers[currentUser.email].voted = true;
-                localStorage.setItem(STORAGE_KEYS.REGISTERED_USERS, JSON.stringify(registeredUsers));
-            }
-
-            choices.forEach(id => {
-                const c = candidates.find(item => item.id === id);
-                if (c) c.votes = (c.votes || 0) + 1;
-            });
-            localStorage.setItem(STORAGE_KEYS.CANDIDATES, JSON.stringify(candidates));
-
-            selectedCandidateIds = [];
-            refreshActiveViews();
-
-            if (gasWebAppUrl) {
-                await pushActionToSheets('vote', {
+            try {
+                await fbDb.collection('votes').doc(currentUser.uid).set({
                     email: currentUser.email,
                     name: currentUser.name,
-                    choices: choices,
-                    choiceNames: choiceNames
+                    choices: choices.map(String),
+                    choiceNames,
+                    createdAt: FV().serverTimestamp()
                 });
+                selectedCandidateIds = [];
+                showToast("Suara Anda berhasil dikirim & dicatat ke database!");
+            } catch (err) {
+                showToast(err && err.code === 'permission-denied'
+                    ? "Suara ditolak: sesi voting tidak aktif, waktu habis, atau Anda sudah memilih."
+                    : dbErrorMessage(err), "error");
             }
-
-            showToast("Suara Anda berhasil dikirim & dicatat ke database!");
         }
 
         // =========================================================================
@@ -2302,13 +2267,20 @@ function jsonResponse(obj) {
                 ? `<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-[#16A34A]/20 text-emerald-300 border border-[#16A34A]/40"><i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i> Publikasi Top 3 Aktif</span>`
                 : `<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-white/10 text-slate-200 border border-white/15"><i data-lucide="eye" class="w-3.5 h-3.5"></i> Preview Admin (Belum Publik)</span>`;
 
-            const sorted = [...candidates].sort((a, b) => (b.votes || 0) - (a.votes || 0));
-            const top3 = sorted.slice(0, 3);
+            let top3;
+            if (isAdmin) {
+                top3 = [...candidates].sort((a, b) => (b.votes || 0) - (a.votes || 0)).slice(0, 3);
+            } else {
+                top3 = (serverTop3 || []).map(t => {
+                    const c = candidates.find(item => item.id === t.id);
+                    return c ? { ...c, votes: t.votes } : null;
+                }).filter(Boolean);
+            }
 
             const rankStyles = [
                 { label: 'Peringkat #1', badge: 'bg-[#26499E] text-white', ring: 'border-[#26499E] ring-4 ring-[#26499E]/10' },
                 { label: 'Peringkat #2', badge: 'bg-[#16A34A] text-white', ring: 'border-white/10' },
-                { label: 'Peringkat #3', badge: 'bg-[#14171D] text-white', ring: 'border-white/10' }
+                { label: 'Peringkat #3', badge: 'bg-slate-600 text-white', ring: 'border-white/10' }
             ];
 
             let cardsHtml = `<div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">`;
@@ -2583,8 +2555,9 @@ function jsonResponse(obj) {
 
             confirmCallback = onConfirm;
             okBtn.onclick = function() {
+                const cb = confirmCallback;   // simpan dulu: closeConfirmModal() mengosongkan confirmCallback
                 closeConfirmModal();
-                if (typeof confirmCallback === 'function') confirmCallback();
+                if (typeof cb === 'function') cb();
             };
 
             document.getElementById('custom-confirm-modal').classList.remove('hidden');
