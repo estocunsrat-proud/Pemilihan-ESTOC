@@ -1,0 +1,133 @@
+rules_version = '2';
+
+// ATURAN KEAMANAN PEMIRA KSPM EQUIL STOCK CLUB UNSRAT
+// Pasang di: Firebase Console > Firestore Database > Rules > Publish.
+// GANTI email admin di fungsi isAdmin() dengan email admin yang sebenarnya.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- Fungsi bantu ----------
+    function signedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    function myEmail() {
+      return request.auth.token.email.lower();
+    }
+    function isAdmin() {
+      return signedIn() && myEmail() in ['rulan0144@gmail.com'];
+    }
+    function allowedPath() {
+      return /databases/$(database)/documents/config/allowed;
+    }
+    function electionPath() {
+      return /databases/$(database)/documents/config/election;
+    }
+    // Jika daftar email diizinkan kosong / belum ada, semua akun Google boleh memilih.
+    function isAllowedVoter() {
+      return signedIn() && (
+        !exists(allowedPath()) ||
+        get(allowedPath()).data.emails.size() == 0 ||
+        myEmail() in get(allowedPath()).data.emails
+      );
+    }
+    function canUse() {
+      return isAdmin() || isAllowedVoter();
+    }
+    // Sesi dihitung oleh server: waktu mulai (server) + durasi menit.
+    function isElectionOpen() {
+      let e = get(electionPath()).data;
+      return e.isStarted == true
+        && request.time < e.startedAt + duration.value(e.durationMinutes, 'm');
+    }
+
+    // ---------- Pengaturan sesi voting ----------
+    match /config/election {
+      allow read: if canUse();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['isStarted', 'startedAt', 'durationMinutes', 'isPublished'])
+        && request.resource.data.isStarted is bool
+        && request.resource.data.isPublished is bool
+        && request.resource.data.durationMinutes is int
+        && request.resource.data.durationMinutes >= 1
+        && request.resource.data.durationMinutes <= 1440
+        && (!('startedAt' in request.resource.data) || request.resource.data.startedAt is timestamp);
+    }
+
+    // ---------- Daftar email pemilih yang diizinkan (opsional) ----------
+    match /config/allowed {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['emails'])
+        && request.resource.data.emails is list
+        && request.resource.data.emails.size() <= 2000;
+    }
+
+    // ---------- Kandidat ----------
+    match /candidates/{cid} {
+      allow read: if canUse();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['id', 'name', 'batch', 'photo'])
+        && request.resource.data.id is int
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 100
+        && request.resource.data.batch in ['Batch 25', 'Batch 26']
+        && request.resource.data.photo is string
+        && request.resource.data.photo.size() < 400000;
+      allow delete: if isAdmin();
+    }
+
+    // ---------- Suara: 1 dokumen per akun, tidak bisa diubah ----------
+    match /votes/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && canUse()
+        && isElectionOpen()
+        && request.resource.data.keys().hasOnly(['email', 'name', 'choices', 'choiceNames', 'createdAt'])
+        && request.resource.data.email == myEmail()
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 100
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.choices is list
+        && request.resource.data.choices.size() == 2
+        && request.resource.data.choices[0] is string
+        && request.resource.data.choices[1] is string
+        && request.resource.data.choices[0].matches('[0-9]+')
+        && request.resource.data.choices[1].matches('[0-9]+')
+        && request.resource.data.choices[0] != request.resource.data.choices[1]
+        && exists(/databases/$(database)/documents/candidates/$(request.resource.data.choices[0]))
+        && exists(/databases/$(database)/documents/candidates/$(request.resource.data.choices[1]))
+        && request.resource.data.choiceNames is list
+        && request.resource.data.choiceNames.size() == 2;
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // ---------- Catatan login pemilih ----------
+    match /users/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow create, update: if signedIn()
+        && request.auth.uid == uid
+        && canUse()
+        && request.resource.data.keys().hasOnly(['email', 'name', 'loginAt'])
+        && request.resource.data.email == myEmail()
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 100
+        && request.resource.data.loginAt == request.time;
+      allow delete: if isAdmin();
+    }
+
+    // ---------- Hasil Top 3 yang dipublikasikan (hanya ada setelah admin publikasi) ----------
+    match /results/{rid} {
+      allow read: if canUse();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['top3', 'updatedAt'])
+        && request.resource.data.top3 is list
+        && request.resource.data.top3.size() <= 3
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if isAdmin();
+    }
+  }
+}
