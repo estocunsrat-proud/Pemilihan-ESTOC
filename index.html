@@ -145,10 +145,23 @@ input::placeholder,textarea::placeholder{color:#64748B!important}
       </div>
 
       <div class="bg-[#14171D] rounded-2xl p-6 border border-white/10">
+        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+          <div><h3 class="text-base font-bold">Email yang Diblokir</h3>
+            <p class="text-xs text-slate-400 mt-1 max-w-2xl">Email yang diblokir tidak bisa login maupun memberi suara. Anda juga bisa memblokir langsung dari tabel monitoring di bawah.</p></div>
+          <span id="banned-count" class="bg-[#DC2626]/10 text-[#F87171] border border-[#DC2626]/25 font-bold px-3.5 py-2 rounded-xl text-xs shrink-0">0 diblokir</span>
+        </div>
+        <div class="flex gap-2 mt-4">
+          <input id="ban-email" type="email" placeholder="email@gmail.com" onkeydown="if(event.key==='Enter')banByInput()" class="flex-1 min-w-0 px-3.5 py-2.5 border border-white/15 rounded-xl text-sm focus:ring-2 focus:ring-[#26499E] focus:outline-none">
+          <button onclick="banByInput()" class="bg-[#DC2626] hover:bg-[#B91C1C] text-white font-semibold py-2.5 px-5 rounded-xl text-xs sm:text-sm transition shrink-0">Blokir</button>
+        </div>
+        <div id="banned-list" class="mt-4 flex flex-wrap gap-2"></div>
+      </div>
+
+      <div class="bg-[#14171D] rounded-2xl p-6 border border-white/10">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5">
           <div><h3 class="text-lg font-bold">Monitoring Pemilih Login & Suara Masuk</h3><p class="text-xs sm:text-sm text-slate-400">Akun Google yang telah masuk beserta waktu login, status voting, dan pilihan kandidat (khusus Admin). Diperbarui otomatis.</p></div>
           <div class="flex flex-wrap items-center gap-2">
-            <select id="voter-filter" onchange="renderVoters()" class="px-3 py-2 border border-white/15 rounded-xl text-xs font-semibold focus:outline-none"><option value="all">Semua Status</option><option value="voted">Sudah Voting</option><option value="pending">Belum Voting</option></select>
+            <select id="voter-filter" onchange="renderVoters()" class="px-3 py-2 border border-white/15 rounded-xl text-xs font-semibold focus:outline-none"><option value="all">Semua Status</option><option value="voted">Sudah Voting</option><option value="pending">Belum Voting</option><option value="banned">Diblokir</option></select>
             <span id="voters-count" class="bg-[#26499E]/10 text-[#8FA9FF] border border-[#26499E]/20 font-bold px-3.5 py-2 rounded-xl text-xs">0 Akun Masuk</span>
           </div>
         </div>
@@ -158,7 +171,8 @@ input::placeholder,textarea::placeholder{color:#64748B!important}
               <th class="px-5 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider">Nama & Email Google</th>
               <th class="px-5 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider">Waktu Login</th>
               <th class="px-5 py-3 text-center text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status Voting</th>
-              <th class="px-5 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider">2 Kandidat Dipilih</th></tr></thead>
+              <th class="px-5 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider">2 Kandidat Dipilih</th>
+              <th class="px-5 py-3 text-right text-[11px] font-bold text-slate-400 uppercase tracking-wider">Aksi</th></tr></thead>
             <tbody id="voters-body" class="divide-y divide-white/10 text-sm"></tbody>
           </table>
         </div>
@@ -251,13 +265,16 @@ input::placeholder,textarea::placeholder{color:#64748B!important}
       <input type="hidden" id="cand-id">
       <div class="flex items-center gap-4 p-3.5 bg-[#1A1E26] rounded-2xl border border-white/10">
         <img id="cand-prev" alt="" class="w-16 h-16 rounded-2xl object-cover border border-white/15 bg-[#14171D] shrink-0">
-        <div class="min-w-0 flex-1"><p class="text-xs font-bold">Preview Foto Kandidat</p><p id="cand-info" class="text-[11px] text-slate-400 mt-0.5">Otomatis dikompresi 280x280px (JPEG) agar aman disimpan di database.</p></div>
+        <div class="min-w-0 flex-1"><p class="text-xs font-bold">Preview Foto Kandidat</p><p id="cand-info" class="text-[11px] text-slate-400 mt-0.5">Foto dari link Drive atau upload perangkat (otomatis dikompresi 280x280px).</p></div>
       </div>
       <div><label class="block text-xs font-bold text-slate-200 uppercase mb-1.5">Nama Lengkap Kandidat</label>
         <input id="cand-name" required maxlength="100" placeholder="cth: Adriano J. M. Mamangkei" class="w-full px-3.5 py-2.5 border border-white/15 rounded-xl focus:ring-2 focus:ring-[#26499E] focus:outline-none text-sm"></div>
       <div><label class="block text-xs font-bold text-slate-200 uppercase mb-1.5">Batch / Angkatan</label>
         <select id="cand-batch" class="w-full px-3.5 py-2.5 border border-white/15 rounded-xl text-sm font-medium"><option>Batch 25</option><option>Batch 26</option></select></div>
-      <div><label class="block text-xs font-bold text-slate-200 uppercase mb-1.5">Upload Foto dari Perangkat</label>
+      <div><label class="block text-xs font-bold text-slate-200 uppercase mb-1.5">Link Foto Google Drive</label>
+        <input id="cand-link" type="url" oninput="onLink(this)" placeholder="https://drive.google.com/file/d/.../view" class="w-full px-3.5 py-2.5 border border-white/15 rounded-xl text-sm focus:ring-2 focus:ring-[#26499E] focus:outline-none">
+        <p class="text-[11px] text-slate-500 mt-1.5 leading-relaxed">Di Google Drive: klik kanan foto &gt; Bagikan &gt; Akses umum &gt; <b>Siapa saja yang memiliki link</b> (Viewer), lalu salin link dan tempel di sini.</p></div>
+      <div><label class="block text-xs font-bold text-slate-200 uppercase mb-1.5">Atau Upload Foto dari Perangkat</label>
         <input type="file" id="cand-file" accept="image/*" onchange="pickPhoto(this)" class="w-full px-3 py-2 border border-white/15 rounded-xl text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#26499E]/20 file:text-[#8FA9FF]">
         <button type="button" onclick="clearPhoto()" class="mt-2 text-[11px] text-slate-400 hover:text-white underline">Hapus foto (pakai inisial)</button></div>
       <div class="flex justify-end gap-2.5 pt-4 border-t border-white/10">
@@ -287,6 +304,18 @@ input::placeholder,textarea::placeholder{color:#64748B!important}
       <button id="cf-ok" class="px-4 py-2.5 rounded-xl text-xs font-bold"></button>
     </div>
   </div>
+</div>
+
+<div id="m-name" class="hidden fixed inset-0 bg-[#0B0D10]/95 z-[65] items-center justify-center p-4 overflow-y-auto">
+  <form onsubmit="saveName(event)" class="bg-[#14171D] rounded-2xl border border-white/10 w-full max-w-md p-6 my-auto accent">
+    <h3 class="text-xl font-extrabold mt-1">Tuliskan nama lengkap kamu</h3>
+    <p class="text-xs text-slate-400 mt-1.5 mb-5 leading-relaxed">Wajib diisi sebelum melanjutkan. Nama ini dipakai panitia untuk mencatat siapa saja yang sudah memilih. Isi dengan nama asli sesuai identitas anggota.</p>
+    <label for="nm-input" class="block text-xs font-bold text-slate-200 uppercase mb-1.5">Nama Lengkap <span class="text-[#F87171]">*</span></label>
+    <input id="nm-input" required maxlength="100" autocomplete="name" placeholder="cth: Budi Santoso" class="w-full px-3.5 py-3 border border-white/15 rounded-xl text-sm focus:ring-2 focus:ring-[#26499E] focus:outline-none">
+    <div id="nm-err" class="hidden mt-3 px-3.5 py-2.5 rounded-xl bg-[#DC2626]/10 border border-[#DC2626]/30 text-xs text-[#F87171] leading-relaxed"></div>
+    <button type="submit" id="nm-save" class="mt-5 w-full py-3 rounded-xl bg-[#26499E] hover:bg-[#1E3A8A] font-bold text-sm disabled:opacity-50">Simpan & Lanjutkan</button>
+    <button type="button" onclick="logout()" class="mt-2 w-full py-2 text-xs text-slate-400 hover:text-white">Bukan akun saya? Keluar</button>
+  </form>
 </div>
 
 <div id="toast" class="fixed bottom-5 right-5 left-5 sm:left-auto max-w-sm bg-[#14171D] border border-slate-700 rounded-2xl px-4 py-3 text-sm shadow-xl z-[70] transition-all duration-300 translate-y-24 opacity-0 pointer-events-none"></div>
@@ -364,9 +393,9 @@ const fmtCd = ms => { const s=Math.max(0,Math.floor(ms/1000)),h=Math.floor(s/360
 // STATE
 // ============================================================================
 let auth, db;
-const S = { user:null, ready:false, el:{isStarted:false,start:null,dur:15,pub:false}, cands:[], votes:[], users:[], allowed:[],
+const S = { user:null, ready:false, el:{isStarted:false,start:null,dur:15,pub:false}, cands:[], votes:[], users:[], allowed:[], banned:[],
   myVote:null, pending:false, top3:null, tab:'voting', batch:'all', q:'', sel:[], busy:false, skew:0, online:false, loginMsg:'', loading:false };
-let unsubs=[], authSeq=0, seeded=false, votesServerSeen=false, lastSync=null, wasOpen=false, chart=null, photoData='', raf=0;
+let unsubs=[], authSeq=0, nameSeq=0, seeded=false, votesServerSeen=false, lastSync=null, wasOpen=false, chart=null, photoData='', raf=0;
 
 const SV = () => firebase.firestore.FieldValue.serverTimestamp();
 const isAdminEmail = e => ADMIN_EMAILS.map(x=>x.toLowerCase()).includes(String(e||'').toLowerCase());
@@ -382,9 +411,9 @@ function ranked(){ const m=counts(); return [...S.cands].map(c=>({...c,votes:m[c
 // Gabungan akun yang sudah login dan yang sudah memilih (tanpa admin)
 function rows(){
   const map={};
-  S.users.filter(u=>!isAdminEmail(u.email)).forEach(u=>map[u.id]={uid:u.id,email:u.email,name:u.name,login:u.loginAt,voted:false});
+  S.users.filter(u=>!isAdminEmail(u.email)).forEach(u=>map[u.id]={uid:u.id,email:u.email,name:u.fullName||u.name,login:u.loginAt,voted:false});
   S.votes.filter(v=>!isAdminEmail(v.email)).forEach(v=>{ const r=map[v.id]||(map[v.id]={uid:v.id,email:v.email,name:v.name,login:null}); r.voted=true; r.vote=v; });
-  return Object.values(map);
+  return Object.values(map).map(x=>({...x,banned:S.banned.includes(String(x.email||'').toLowerCase())}));
 }
 
 // ============================================================================
@@ -423,7 +452,7 @@ async function login(){
 function logout(){ auth.signOut(); }
 function detach(){ unsubs.forEach(u=>{try{u()}catch(e){}}); unsubs=[]; }
 function resetData(){
-  Object.assign(S,{cands:[],votes:[],users:[],allowed:[],myVote:null,pending:false,top3:null,sel:[],skew:0,online:false,
+  Object.assign(S,{cands:[],votes:[],users:[],allowed:[],banned:[],myVote:null,pending:false,top3:null,sel:[],skew:0,online:false,
     el:{isStarted:false,start:null,dur:15,pub:false},batch:'all',q:''});
   seeded=false; votesServerSeen=false; lastSync=null; wasOpen=false;
   $('#emails').value=''; $('#q') && ($('#q').value='');
@@ -431,32 +460,54 @@ function resetData(){
 
 async function onAuth(u){
   const my=++authSeq; detach(); resetData(); S.ready=true;
-  if(!u){ S.user=null; $('#app').classList.add('hidden'); $('#login').classList.remove('hidden'); S.loading=false; setLoginUI(); return; }
+  if(!u){ S.user=null; show('m-name',false); $('#app').classList.add('hidden'); $('#login').classList.remove('hidden'); S.loading=false; setLoginUI(); return; }
   const email=(u.email||'').toLowerCase();
   S.user={uid:u.uid,email,name:(u.displayName||email).slice(0,100),isAdmin:isAdminEmail(email)};
   S.tab=S.user.isAdmin?'admin':'voting';
-  try{ await db.doc('users/'+u.uid).set({email,name:S.user.name,loginAt:SV()}); }
+  try{ await db.doc('users/'+u.uid).set({email,name:S.user.name,loginAt:SV()},{merge:true}); }
   catch(e){
     if(my!==authSeq) return;
     S.loginMsg = e.code==='permission-denied'
       ? (S.user.isAdmin?'Akses admin ditolak oleh Firebase. Pastikan aturan keamanan (firestore.rules) sudah dipasang dan email admin di dalamnya sama dengan di index.html.'
-                       :'Akun '+email+' tidak terdaftar sebagai pemilih atau tidak memiliki akses. Hubungi panitia.')
+                       :'Akun '+email+' tidak terdaftar sebagai pemilih, atau diblokir oleh panitia. Hubungi panitia.')
       : errMsg(e);
     S.user=null; auth.signOut(); return;
   }
   if(my!==authSeq) return;
   // Selisih jam perangkat dengan jam server, supaya timer akurat walau jam HP salah
-  try{ const s=await db.doc('users/'+u.uid).get({source:'server'}); const t=s.data().loginAt; if(t) S.skew=t.toMillis()-Date.now(); }catch(e){}
+  let full='';
+  try{ const s=await db.doc('users/'+u.uid).get({source:'server'}); const d=s.data()||{}; if(d.loginAt) S.skew=d.loginAt.toMillis()-Date.now(); full=String(d.fullName||'').trim(); }catch(e){}
   if(my!==authSeq) return;
+  if(full){ S.user.name=full; enter(my); } else askName(my);
+}
+function enter(my){
+  if(my!==authSeq||!S.user) return;
   S.loginMsg=''; $('#login').classList.add('hidden'); $('#app').classList.remove('hidden');
   listen(); renderNav(); setTab(S.tab);
   toast(S.user.isAdmin?'Selamat datang, Administrator ('+S.user.name+')':'Berhasil masuk sebagai '+S.user.name);
+}
+// ---- Pop-up wajib isi nama lengkap ----
+function askName(my){
+  nameSeq=my; $('#nm-input').value=''; $('#nm-err').classList.add('hidden');
+  $('#login').classList.add('hidden'); show('m-name',true); setTimeout(()=>$('#nm-input').focus(),60);
+}
+async function saveName(e){
+  e.preventDefault();
+  const v=$('#nm-input').value.replace(/\s+/g,' ').trim(), err=$('#nm-err');
+  if(!/^[\p{L}][\p{L}\s.'’-]{2,99}$/u.test(v)){ err.textContent='Nama lengkap wajib diisi: minimal 3 huruf, hanya huruf dan spasi.'; err.classList.remove('hidden'); return; }
+  const btn=$('#nm-save'); btn.disabled=true; err.classList.add('hidden');
+  try{
+    const w=db.doc('users/'+S.user.uid).set({fullName:v,loginAt:SV()},{merge:true});
+    await Promise.race([w,new Promise((_,r)=>setTimeout(()=>r({code:'timeout'}),15000))]);
+    S.user.name=v; show('m-name',false); enter(nameSeq);
+  }catch(ex){ console.error(ex); err.textContent=errMsg(ex)+(ex.code==='permission-denied'?' Jika Anda admin: pastikan firestore.rules terbaru sudah dipublish.':''); err.classList.remove('hidden'); }
+  btn.disabled=false;
 }
 
 // ============================================================================
 // REALTIME (Firestore onSnapshot)
 // ============================================================================
-function on(ref,fn){ unsubs.push(ref.onSnapshot(fn,e=>{ console.error(e); if(e.code==='permission-denied'&&S.user){ S.loginMsg='Akses ditolak oleh aturan keamanan Firebase.'; auth.signOut(); } else { S.online=false; toast(errMsg(e),'error'); schedule(); } })); }
+function on(ref,fn){ unsubs.push(ref.onSnapshot(fn,e=>{ console.error(e); if(e.code==='permission-denied'&&S.user){ S.loginMsg='Akses ditolak. Akun Anda tidak diizinkan atau diblokir oleh panitia.'; auth.signOut(); } else { S.online=false; toast(errMsg(e),'error'); schedule(); } })); }
 function listen(){
   const admin=S.user.isAdmin;
   on(db.doc('config/election'),s=>{
@@ -481,6 +532,7 @@ function listen(){
     });
     on(db.collection('users'),s=>{ S.users=s.docs.map(d=>({id:d.id,...d.data()})); schedule(); });
     on(db.doc('config/allowed'),s=>{ S.allowed=s.exists?(s.data().emails||[]):[]; schedule(); });
+    on(db.doc('config/banned'),s=>{ S.banned=s.exists?(s.data().emails||[]).map(x=>String(x).toLowerCase()):[]; schedule(); });
   }
 }
 async function seed(){
@@ -552,6 +604,25 @@ function saveAllowed(){
   $('#emails').blur();
   run(()=>db.doc('config/allowed').set({emails}), emails.length?'Daftar disimpan: '+emails.length+' email diizinkan.':'Daftar dikosongkan: semua akun Google boleh memilih.');
 }
+function banEmail(email,name){
+  email=String(email||'').trim().toLowerCase();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ toast('Format email tidak valid.','error'); return; }
+  if(isAdminEmail(email)){ toast('Email admin tidak dapat diblokir.','error'); return; }
+  if(S.banned.includes(email)){ toast('Email ini sudah diblokir.','error'); return; }
+  const v=S.votes.find(x=>String(x.email||'').toLowerCase()===email);
+  confirmBox({title:'Blokir email ini?',danger:true,okText:'Ya, blokir',
+    message:'<b class="text-white">'+esc(name||email)+'</b> tidak akan bisa login atau memberi suara lagi.'
+      +(v?'<label class="flex items-start gap-2 mt-3 text-xs text-slate-300"><input type="checkbox" id="ban-del" class="mt-0.5"> <span>Akun ini sudah memilih. Hapus juga suaranya dari hasil.</span></label>':''),
+    onOk:()=>{ const del=!!(v&&$('#ban-del')&&$('#ban-del').checked);
+      run(async()=>{ const b=db.batch(); b.set(db.doc('config/banned'),{emails:[...new Set([...S.banned,email])]}); if(del) b.delete(db.collection('votes').doc(v.id)); await b.commit(); },'Email diblokir.'+(del?' Suaranya dihapus.':'')); }});
+}
+function toggleBan(uid){
+  const x=rows().find(r=>r.uid===uid); if(!x) return;
+  if(x.banned) run(()=>db.doc('config/banned').set({emails:S.banned.filter(e=>e!==String(x.email).toLowerCase())}),'Blokir dibuka.');
+  else banEmail(x.email,x.name);
+}
+function banByInput(){ const i=$('#ban-email'); banEmail(i.value); i.value=''; }
+function unban(i){ const e=S.banned[i]; if(e===undefined) return; run(()=>db.doc('config/banned').set({emails:S.banned.filter(x=>x!==e)}),'Blokir dibuka untuk '+e+'.'); }
 function copyLink(){ copyText(location.origin+location.pathname,'Link pemilih disalin.'); }
 async function openRules(){
   show('m-rules',true); const p=$('#rules-text'); p.textContent='Memuat...';
@@ -564,13 +635,30 @@ function openCand(id){
   const c=id?S.cands.find(x=>x.id===id):null;
   $('#cand-id').value=c?c.id:''; $('#cand-name').value=c?c.name:''; $('#cand-batch').value=c?c.batch:'Batch 25';
   $('#cand-title').textContent=c?'Edit Kandidat':'Tambah Kandidat'; $('#cand-file').value='';
-  photoData=c?c.photo||'':''; $('#cand-info').textContent='Otomatis dikompresi 280x280px (JPEG) agar aman disimpan di database.';
+  photoData=c?c.photo||'':''; $('#cand-link').value=/^https?:/.test(photoData)?photoData:''; $('#cand-info').textContent=INFO0;
   prevPhoto(c?c.name:'?',c?c.batch:'Batch 25'); show('m-cand',true);
 }
-function prevPhoto(name,batch){ $('#cand-prev').src=photoData||avatarURI($('#cand-name').value||name||'?',$('#cand-batch').value||batch); }
+const INFO0='Foto dari link Drive atau upload perangkat (otomatis dikompresi 280x280px).';
+function prevPhoto(name,batch){
+  const img=$('#cand-prev'), fb=avatarURI($('#cand-name').value||name||'?',$('#cand-batch').value||batch);
+  img.referrerPolicy='no-referrer';
+  img.onerror=()=>{ img.onerror=null; img.src=fb; if(photoData) $('#cand-info').textContent='Foto tidak dapat dimuat. Pastikan file Drive dibagikan ke "Siapa saja yang memiliki link".'; };
+  img.src=photoData||fb;
+}
+function driveToDirect(u){
+  u=String(u||'').trim(); if(!u) return '';
+  const m=u.match(/drive\.google\.com\/file\/d\/([\w-]+)/)||u.match(/drive\.google\.com\/(?:open|uc|thumbnail)\?[^#]*?\bid=([\w-]+)/)||u.match(/docs\.google\.com\/[^?#]*\/d\/([\w-]+)/)||u.match(/lh3\.googleusercontent\.com\/d\/([\w-]+)/);
+  if(m) return 'https://lh3.googleusercontent.com/d/'+m[1]+'=w400';
+  return /^https:\/\/\S+$/i.test(u)?u:null;
+}
+function onLink(inp){
+  const v=driveToDirect(inp.value);
+  if(v===null){ photoData=''; $('#cand-info').textContent='Link tidak valid. Gunakan link Google Drive atau alamat gambar berawalan https://'; prevPhoto(); return; }
+  photoData=v; $('#cand-file').value=''; $('#cand-info').textContent=v?'Link terdeteksi. Pastikan akses file: Siapa saja yang memiliki link.':INFO0; prevPhoto();
+}
 $('#cand-name').addEventListener('input',()=>{ if(!photoData) prevPhoto(); });
 $('#cand-batch').addEventListener('change',()=>{ if(!photoData) prevPhoto(); });
-function clearPhoto(){ photoData=''; $('#cand-file').value=''; prevPhoto(); }
+function clearPhoto(){ photoData=''; $('#cand-file').value=''; $('#cand-link').value=''; $('#cand-info').textContent=INFO0; prevPhoto(); }
 function pickPhoto(inp){
   const f=inp.files[0]; if(!f) return;
   const r=new FileReader();
@@ -578,7 +666,7 @@ function pickPhoto(inp){
       const N=280,c=document.createElement('canvas'); c.width=c.height=N; const x=c.getContext('2d');
       const s=Math.min(i.width,i.height), sx=(i.width-s)/2, sy=(i.height-s)/2;
       x.fillStyle='#14171D'; x.fillRect(0,0,N,N); x.drawImage(i,sx,sy,s,s,0,0,N,N);
-      photoData=c.toDataURL('image/jpeg',.82); $('#cand-prev').src=photoData;
+      photoData=c.toDataURL('image/jpeg',.82); $('#cand-link').value=''; prevPhoto();
       $('#cand-info').textContent='Foto dikompresi menjadi '+Math.round(photoData.length*.75/1024)+' KB.'; };
     i.onerror=()=>toast('File bukan gambar yang valid.','error'); i.src=r.result; };
   r.readAsDataURL(f);
@@ -606,7 +694,7 @@ function avatarURI(name,batch){
   const bg=batch==='Batch 25'?'#26499E':'#16A34A';
   return 'data:image/svg+xml;utf8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="${bg}"/><text x="50" y="50" dy=".35em" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">${esc(ini)}</text></svg>`);
 }
-const av = (c,s=44) => `<img src="${esc(c.photo||avatarURI(c.name,c.batch))}" alt="" class="rounded-full object-cover shrink-0 border border-white/10" style="width:${s}px;height:${s}px">`;
+const av = (c,s=44) => `<img src="${esc(c.photo||avatarURI(c.name,c.batch))}" data-fb="${esc(avatarURI(c.name,c.batch))}" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src=this.dataset.fb" alt="" class="rounded-full object-cover shrink-0 border border-white/10" style="width:${s}px;height:${s}px">`;
 const badge = b => `<span class="inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-bold ${b==='Batch 25'?'bg-[#26499E]/20 text-[#8FA9FF]':'bg-[#16A34A]/20 text-[#4ADE80]'}">${esc(b)}</span>`;
 const stat = (l,v,c='') => `<div class="bg-[#14171D] rounded-2xl p-5 border border-white/10"><div class="text-xs text-slate-400 font-medium">${l}</div><div class="text-2xl sm:text-3xl font-extrabold mt-1 ${c}">${v}</div></div>`;
 
@@ -646,7 +734,7 @@ function renderAdmin(){
   $('#db-badge').className='inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold '+(ok?'bg-[#16A34A]/10 text-[#4ADE80] border border-[#16A34A]/25':'bg-amber-500/15 text-amber-300');
   $('#db-badge').innerHTML=ok?'<span class="relative flex h-2 w-2"><span class="ring absolute inline-flex h-full w-full rounded-full bg-[#16A34A] opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-[#16A34A]"></span></span> Terhubung • Real-time':'<span class="w-2 h-2 rounded-full bg-amber-500"></span> Menyambung...';
   $('#last-sync').textContent='Terakhir diperbarui: '+(lastSync?lastSync.toLocaleTimeString('id-ID'):'menunggu data...');
-  const r=rows(), voted=r.filter(x=>x.voted).length, pend=r.length-voted, pct=r.length?Math.round(voted/r.length*100):0;
+  const r=rows().filter(x=>!x.banned), voted=r.filter(x=>x.voted).length, pend=r.length-voted, pct=r.length?Math.round(voted/r.length*100):0;
   $('#admin-stats').innerHTML=stat('Akun Sudah Masuk',r.length)+stat('Sudah Memilih',voted,'text-[#4ADE80]')+stat('Belum Memilih',pend,'text-amber-300')+stat('Partisipasi',pct+'%','text-[#8FA9FF]');
   $('#btn-start').disabled=ph==='open'; $('#btn-stop').disabled=ph!=='open';
   const st=$('#admin-status'); st.textContent=ph==='open'?'Voting Berjalan':ph==='ended'?'Sesi Voting Berakhir':'Menunggu Dimulai';
@@ -657,19 +745,25 @@ function renderAdmin(){
   pb.title=S.el.pub||canPub?'':'Hentikan voting dan pastikan ada suara masuk terlebih dahulu.';
   $('#allowed-count').textContent=S.allowed.length?S.allowed.length+' email diizinkan':'Semua akun diizinkan';
   const ta=$('#emails'); if(document.activeElement!==ta) ta.value=S.allowed.join('\n');
-  renderVoters(); renderCandTable(); tick();
+  renderBanned(); renderVoters(); renderCandTable(); tick();
 }
 function renderVoters(){
   const f=$('#voter-filter').value, all=rows();
   const toMs=x=>x&&x.toMillis?x.toMillis():0;
-  let list=all.filter(x=>f==='all'||(f==='voted'?x.voted:!x.voted))
+  let list=all.filter(x=>f==='all'||(f==='banned'?x.banned:f==='voted'?x.voted&&!x.banned:!x.voted&&!x.banned))
     .sort((a,b)=>(b.voted-a.voted)||((b.vote?toMs(b.vote.createdAt):toMs(b.login))-(a.vote?toMs(a.vote.createdAt):toMs(a.login))));
   $('#voters-count').textContent=all.length+' Akun Masuk';
   $('#voters-body').innerHTML=list.map(x=>`<tr class="hover:bg-white/5"><td class="px-5 py-3"><div class="font-semibold">${esc(x.name)}</div><div class="text-xs text-slate-400">${esc(x.email)}</div></td>
     <td class="px-5 py-3 text-xs text-slate-300 whitespace-nowrap">${fmtDT(x.login)}</td>
-    <td class="px-5 py-3 text-center">${x.voted?'<span class="inline-flex px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#16A34A]/20 text-[#4ADE80]">Sudah Voting</span>':'<span class="inline-flex px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-300">Belum Voting</span>'}</td>
-    <td class="px-5 py-3 text-xs">${x.vote?(x.vote.choices||[]).map(c=>esc(cname(c))).join(' <span class="text-slate-500">&amp;</span> ')+'<div class="text-slate-500 mt-0.5">'+fmtT(x.vote.createdAt)+'</div>':'<span class="text-slate-500">-</span>'}</td></tr>`).join('')
-    ||'<tr><td colspan="4" class="px-5 py-8 text-center text-sm text-slate-400">Belum ada data yang cocok.</td></tr>';
+    <td class="px-5 py-3 text-center">${x.banned?'<span class="inline-flex px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#DC2626]/20 text-[#F87171]">Diblokir</span>':x.voted?'<span class="inline-flex px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#16A34A]/20 text-[#4ADE80]">Sudah Voting</span>':'<span class="inline-flex px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-300">Belum Voting</span>'}</td>
+    <td class="px-5 py-3 text-xs">${x.vote?(x.vote.choices||[]).map(c=>esc(cname(c))).join(' <span class="text-slate-500">&amp;</span> ')+'<div class="text-slate-500 mt-0.5">'+fmtT(x.vote.createdAt)+'</div>':'<span class="text-slate-500">-</span>'}</td>
+    <td class="px-5 py-3 text-right whitespace-nowrap"><button onclick="toggleBan('${esc(x.uid)}')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold ${x.banned?'bg-[#16A34A]/20 text-[#4ADE80] hover:bg-[#16A34A]/30':'bg-[#DC2626]/10 text-[#F87171] hover:bg-[#DC2626]/20'}">${x.banned?'Buka Blokir':'Blokir'}</button></td></tr>`).join('')
+    ||'<tr><td colspan="5" class="px-5 py-8 text-center text-sm text-slate-400">Belum ada data yang cocok.</td></tr>';
+}
+function renderBanned(){
+  $('#banned-count').textContent=S.banned.length+' diblokir';
+  $('#banned-list').innerHTML=S.banned.map((e,i)=>`<span class="inline-flex items-center gap-2 pl-3 pr-1.5 py-1 rounded-full bg-[#DC2626]/10 border border-[#DC2626]/25 text-xs text-[#F87171]">${esc(e)}<button onclick="unban(${i})" class="px-2 py-0.5 rounded-full bg-[#16A34A]/20 text-[#4ADE80] text-[10px] font-bold hover:bg-[#16A34A]/30">Buka</button></span>`).join('')
+    ||'<p class="text-sm text-slate-400">Tidak ada email yang diblokir.</p>';
 }
 function renderCandTable(){
   const R=ranked();
@@ -747,11 +841,13 @@ function renderVoting(){
     h=`<div class="bg-[#14171D] rounded-2xl border border-white/10 p-8 text-center"><div class="text-4xl mb-2">🗳️</div><h2 class="text-xl font-extrabold">${ph==='ended'?'Voting telah ditutup':'Menunggu admin memulai voting'}</h2><p class="text-sm text-slate-400 mt-2">${ph==='ended'?'Cek tab Hasil Top 3 untuk melihat hasil resmi setelah dipublikasikan.':'Anda sudah masuk dengan benar. Biarkan halaman ini terbuka.'}</p></div>`;
   } else {
     const can=!admin&&ph==='open', list=S.cands.filter(c=>(S.batch==='all'||c.batch===S.batch)&&(!S.q||c.name.toLowerCase().includes(S.q.toLowerCase())));
-    const pill=(k,l)=>`<button onclick="S.batch='${k}';renderVoting()" class="px-3.5 py-2 rounded-xl text-xs font-bold ${S.batch===k?'bg-[#26499E] text-white':'bg-[#1A1E26] text-slate-300 hover:bg-[#222733]'}">${l}</button>`;
-    h=`<div class="flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
-        <div class="flex gap-2">${pill('all','Semua')}${pill('Batch 25','Batch 25')}${pill('Batch 26','Batch 26')}</div>
-        <input id="q" value="${esc(S.q)}" oninput="S.q=this.value;renderGrid()" placeholder="Cari nama kandidat..." class="w-full sm:w-72 px-3.5 py-2.5 border border-white/15 rounded-xl text-sm focus:ring-2 focus:ring-[#26499E] focus:outline-none"></div>
-      <div id="cand-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+    const cnt=k=>k==='all'?S.cands.length:S.cands.filter(c=>c.batch===k).length;
+    const pill=(k,l,col)=>`<button onclick="S.batch='${k}';renderVoting()" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${S.batch===k?'bg-[#26499E] text-white':col}">${l} (${cnt(k)})</button>`;
+    h=`<div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#14171D] p-4 rounded-2xl border border-white/10 shadow-sm">
+        <div class="flex flex-wrap items-center gap-2"><span class="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">Filter Batch:</span>
+          ${pill('all','Semua','bg-[#1A1E26] text-slate-300 hover:bg-[#222733]')}${pill('Batch 25','Batch 25','bg-[#26499E]/10 text-[#8FA9FF] hover:bg-[#26499E]/20')}${pill('Batch 26','Batch 26','bg-[#16A34A]/10 text-[#4ADE80] hover:bg-[#16A34A]/20')}</div>
+        <input id="q" value="${esc(S.q)}" oninput="S.q=this.value;renderGrid()" placeholder="Cari nama kandidat..." class="w-full sm:w-64 px-3.5 py-1.5 border border-white/15 rounded-xl text-xs focus:ring-2 focus:ring-[#26499E] focus:outline-none"></div>
+      <div id="cand-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
       ${can?`<div class="sticky bottom-0 mt-5 -mx-4 sm:mx-0 p-4 bg-[#14171D]/95 backdrop-blur border-t sm:border sm:rounded-2xl border-white/10 flex items-center gap-3">
         <div class="flex-1 min-w-0"><div class="text-[11px] font-bold uppercase text-slate-400">Pilihan Anda (${S.sel.length}/2)</div><div class="text-xs sm:text-sm text-slate-200 truncate">${S.sel.length?S.sel.map(id=>esc(cname(id))).join(' &amp; '):'Pilih tepat 2 kandidat'}</div></div>
         ${S.sel.length?'<button onclick="clearSel()" class="px-3 py-2.5 rounded-xl border border-white/15 text-xs font-semibold text-slate-300 hover:bg-white/5">Batal</button>':''}
@@ -763,11 +859,23 @@ function renderVoting(){
 }
 function renderGrid(){
   const g=$('#cand-grid'); if(!g) return;
-  const can=!S.user.isAdmin&&isOpen(), list=S.cands.filter(c=>(S.batch==='all'||c.batch===S.batch)&&(!S.q||c.name.toLowerCase().includes(S.q.toLowerCase())));
-  g.innerHTML=list.map(c=>{ const on=S.sel.includes(c.id); return `<button onclick="pick(${c.id})" class="bg-[#14171D] rounded-2xl border p-3.5 flex items-center gap-3 text-left transition ${on?'border-[#16A34A] bg-[#16A34A]/10':'border-white/10 '+(can?'hover:bg-white/5':'')}">${av(c,52)}
-    <div class="min-w-0 flex-1"><div class="font-bold text-sm leading-snug">${esc(c.name)}</div><div class="mt-1">${badge(c.batch)}</div></div>
-    ${can?`<div class="w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs shrink-0 ${on?'bg-[#16A34A] border-[#16A34A]':'border-slate-600'}">${on?'✓':''}</div>`:''}</button>`; }).join('')
-    ||'<p class="text-sm text-slate-400 col-span-full py-8 text-center">Tidak ada kandidat yang cocok.</p>';
+  const admin=S.user.isAdmin, can=!admin&&isOpen();
+  const list=S.cands.filter(c=>(S.batch==='all'||c.batch===S.batch)&&(!S.q||c.name.toLowerCase().includes(S.q.toLowerCase())));
+  g.innerHTML=list.map(c=>{
+    const on=S.sel.includes(c.id), fb=avatarURI(c.name,c.batch);
+    return `<div ${can?`onclick="pick(${c.id})"`:''} class="bg-[#14171D] rounded-2xl border transition-all duration-200 overflow-hidden flex flex-col justify-between ${on?'border-[#26499E] ring-4 ring-[#26499E]/15 shadow-lg -translate-y-1':'border-white/10 shadow-sm hover:shadow-md hover:border-white/30'} ${can?'cursor-pointer':'opacity-95'}">
+      <div>
+        <div class="relative aspect-square bg-[#222733] overflow-hidden">
+          <img src="${esc(c.photo||fb)}" data-fb="${esc(fb)}" referrerpolicy="no-referrer" loading="lazy" alt="${esc(c.name)}" onerror="this.onerror=null;this.src=this.dataset.fb" class="w-full h-full object-cover object-center">
+          <span class="absolute top-3 left-3 px-3 py-1 rounded-xl text-[11px] font-bold shadow-sm ${c.batch==='Batch 25'?'bg-[#26499E] text-white':'bg-[#16A34A] text-white'}">${esc(c.batch)}</span>
+          ${on?'<div class="absolute top-3 right-3 bg-[#14171D] text-white text-[11px] font-bold px-2.5 py-1 rounded-xl shadow flex items-center gap-1"><span class="text-[#4ADE80]">✓</span><span>Dipilih</span></div>':''}
+        </div>
+        <div class="p-4 text-center"><h3 class="font-bold text-slate-100 text-sm sm:text-base leading-snug">${esc(c.name)}</h3><p class="text-[11px] text-slate-400 mt-1">Calon Presiden • Equil Stock Club</p></div>
+      </div>
+      <div class="px-4 pb-4"><div class="w-full py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition ${!can?'bg-[#222733] text-slate-400':on?'bg-[#26499E] text-white shadow-sm':'bg-[#222733] text-slate-200 hover:bg-[#26499E]/10 hover:text-[#8FA9FF]'}">
+        <span>${!can?(admin?'Pratinjau Admin':'Menunggu Sesi'):on?'☑ Kandidat Terpilih':'☐ Pilih Kandidat'}</span></div></div>
+    </div>`; }).join('')
+    ||'<div class="col-span-full text-center py-12 bg-[#14171D] rounded-2xl border border-white/10 text-slate-400"><p class="text-sm font-medium">Tidak ada kandidat yang sesuai dengan pencarian.</p></div>';
 }
 
 // ---------- Hasil Top 3 ----------
